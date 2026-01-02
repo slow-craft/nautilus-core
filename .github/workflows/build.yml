@@ -240,11 +240,14 @@ jobs:
 
     - name: Set variables
       run: |
-        VERSION="${GITHUB_REF_NAME,,}-$(git rev-parse --short HEAD)"
+        # Extract version suffix from constant/version.go (e.g., +shadowtls-plus.0.1.0)
+        VERSION_SUFFIX=$(grep 'Version' constant/version.go | grep -oE '\+[^"]+' || echo "")
+
+        VERSION="${GITHUB_REF_NAME,,}-$(git rev-parse --short HEAD)${VERSION_SUFFIX}"
         VERSION="${VERSION//\//-}"
         PackageVersion="$(curl -s "https://api.github.com/repos/MetaCubeX/mihomo/releases/latest" | jq -r '.tag_name' | sed 's/v//g' | awk -F '.' '{$NF = $NF + 1; print}' OFS='.').${VERSION/-/.}"
         if [ -n "${{ github.event.inputs.version }}" ]; then
-          VERSION=${{ github.event.inputs.version }}
+          VERSION="${{ github.event.inputs.version }}${VERSION_SUFFIX}"
           PackageVersion="${VERSION#v}"
         fi
         echo "VERSION=${VERSION}" >> $GITHUB_ENV
