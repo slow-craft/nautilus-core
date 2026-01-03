@@ -1,14 +1,21 @@
 NAME=mihomo
 BINDIR=bin
 BRANCH=$(shell git branch --show-current)
+
+# Extract full version from constant/version.go (e.g., "v1.19.18+shadowtls-plus.0.1.0")
+BASE_VERSION=$(shell grep 'Version.*=' constant/version.go | sed -n 's/.*"\([^"]*\)".*/\1/p')
+COMMIT_HASH=$(shell git rev-parse HEAD)
+COMMIT_TIME=$(shell git log -1 --format=%cd --date=format:'%Y%m%d%H%M%S')
+DIRTY=$(shell git diff --quiet && echo "" || echo "+dirty")
+
 ifeq ($(BRANCH),Alpha)
-VERSION=alpha-$(shell git rev-parse --short HEAD)
+VERSION=alpha-$(BASE_VERSION)-0.$(COMMIT_TIME)-$(COMMIT_HASH)$(DIRTY)
 else ifeq ($(BRANCH),Beta)
-VERSION=beta-$(shell git rev-parse --short HEAD)
+VERSION=beta-$(BASE_VERSION)-0.$(COMMIT_TIME)-$(COMMIT_HASH)$(DIRTY)
 else ifeq ($(BRANCH),)
-VERSION=$(shell git describe --tags)
+VERSION=$(BASE_VERSION)
 else
-VERSION=$(shell git rev-parse --short HEAD)
+VERSION=$(BASE_VERSION)-0.$(COMMIT_TIME)-$(shell git rev-parse --short HEAD)$(DIRTY)
 endif
 
 BUILDTIME=$(shell date -u)
@@ -91,7 +98,7 @@ darwin-arm64:
 linux-386:
 	GOARCH=386 GOOS=linux $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
-linux-amd64-compatible:
+linux-amd64-compatible:    
 	GOARCH=amd64 GOOS=linux GOAMD64=v1 $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
 linux-amd64:
