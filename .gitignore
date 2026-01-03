@@ -32,3 +32,8 @@ test/config/cache*
 
 # Local justfile
 justfile
+
+# Local test files
+mihomo-test
+test.yaml
+backup/
