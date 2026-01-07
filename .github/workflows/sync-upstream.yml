@@ -1,0 +1,32 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Run daily at midnight UTC
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: Alpha
+          fetch-depth: 0
+
+      - name: Sync upstream changes
+        id: sync
+        uses: aormber/Fork-Sync-With-Upstream-action@v1.4.1
+        with:
+          target_sync_branch: Alpha
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+          upstream_sync_branch: Alpha
+          upstream_sync_repo: MetaCubeX/mihomo
+          test_mode: false
+
+      - name: Check sync status
+        if: failure()
+        run: |
+          echo "Sync failed. This might be due to merge conflicts."
+          echo "Please resolve conflicts manually."
