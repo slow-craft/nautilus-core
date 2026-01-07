@@ -29,6 +29,7 @@ test/config/cache*
 
 # Claude
 .claude/
+CLAUDE.md
 
 # Local justfile
 justfile
