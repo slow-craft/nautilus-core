@@ -26,3 +26,14 @@ test/config/cache*
 /output
 .vscode/
 .fleet/
+
+# Claude
+.claude/
+
+# Local justfile
+justfile
+
+# Local test files
+mihomo-test
+test.yaml
+backup/

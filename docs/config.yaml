@@ -1086,6 +1086,21 @@ proxies: # socks5
     #   - http/1.1
     # skip-cert-verify: true
 
+  # shadowtls-plus
+  # ShadowTLS-Plus (STP) 是一个高性能抗审查代理协议
+  # 特点：TLS 1.3 伪装、ECDHE 密钥交换、AES-256-GCM 加密、smux 多路复用
+  - name: shadowtls-plus
+    type: shadowtls-plus
+    server: server.com
+    port: 443
+    uuid: "<your uuid>"          # 必填，用户认证标识符
+    udp: true                    # 可选，是否启用 UDP 支持
+    sni: "www.cloudflare.com"    # 可选，SNI 伪装域名，默认 www.cloudflare.com
+    # handshake-timeout: 30      # 可选，握手超时时间（秒）
+    # idle-timeout: 60           # 可选，空闲超时时间（秒）
+    # dial-timeout: 30           # 可选，连接超时时间（秒）
+    # retry-times: 3             # 可选，重试次数
+
 # dns 出站会将请求劫持到内部 dns 模块，所有请求均在内部处理
   - name: "dns-out"
     type: dns
@@ -1369,7 +1384,7 @@ listeners:
     #   dC5jb20AAA==
     #   -----END ECH KEYS-----
 
-  - name: reidr-in-1
+  - name: redir-in-1
     type: redir
     port: 10811 # 支持使用ports格式，例如200,302 or 200,204,401-429,501-503
     listen: 0.0.0.0
