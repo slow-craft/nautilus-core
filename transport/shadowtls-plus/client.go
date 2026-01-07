@@ -3,10 +3,8 @@ package shadowtlsplus
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"net"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -16,23 +14,19 @@ type Client struct {
 	mu      sync.Mutex
 	session *Session
 	conn    net.Conn
-
-	sniIndex atomic.Uint64
 }
 
 // ClientConfig contains client configuration
 type ClientConfig struct {
 	ServerAddr string
-	Password   string
+	UUID       string
 
-	SNIList           []string
-	SNIRotateMode     string // "random" or "round_robin"
-	SNIRotateFreq     string // "per_connection" or "per_minute"
-	HandshakeTimeout  time.Duration
-	IdleTimeout       time.Duration
-	DialTimeout       time.Duration
-	RetryTimes        int
-	SessionConfig     *SessionConfig
+	SNI              string
+	HandshakeTimeout time.Duration
+	IdleTimeout      time.Duration
+	DialTimeout      time.Duration
+	RetryTimes       int
+	SessionConfig    *SessionConfig
 
 	// Dialer is an optional custom dialer
 	Dialer ContextDialer
@@ -44,20 +38,11 @@ type ContextDialer interface {
 }
 
 // DefaultClientConfig returns a default client configuration
-func DefaultClientConfig(serverAddr, password string) *ClientConfig {
+func DefaultClientConfig(serverAddr, uuid string) *ClientConfig {
 	return &ClientConfig{
-		ServerAddr: serverAddr,
-		Password:   password,
-		SNIList: []string{
-			"time.cloudflare.com",
-			"shopify.com",
-			"time.is",
-			"icook.hk",
-			"www.visa.com",
-			"www.digitalocean.com",
-		},
-		SNIRotateMode:    "random",
-		SNIRotateFreq:    "per_connection",
+		ServerAddr:       serverAddr,
+		UUID:             uuid,
+		SNI:              "www.cloudflare.com",
 		HandshakeTimeout: 30 * time.Second,
 		IdleTimeout:      60 * time.Second,
 		DialTimeout:      30 * time.Second,
@@ -71,31 +56,13 @@ func NewClient(config *ClientConfig) (*Client, error) {
 	if config.ServerAddr == "" {
 		return nil, fmt.Errorf("client: server address required")
 	}
-	if config.Password == "" {
-		return nil, fmt.Errorf("client: password required")
-	}
-	if len(config.SNIList) == 0 {
-		return nil, fmt.Errorf("client: SNI list required")
+	if config.UUID == "" {
+		return nil, fmt.Errorf("client: UUID required")
 	}
 
 	return &Client{
 		config: config,
 	}, nil
-}
-
-// getSNI returns the current SNI value based on rotation mode
-func (c *Client) getSNI() string {
-	if len(c.config.SNIList) == 0 {
-		return "www.cloudflare.com"
-	}
-
-	if c.config.SNIRotateMode == "round_robin" {
-		idx := c.sniIndex.Add(1) - 1
-		return c.config.SNIList[idx%uint64(len(c.config.SNIList))]
-	}
-
-	// random mode
-	return c.config.SNIList[rand.Intn(len(c.config.SNIList))]
 }
 
 // Connect establishes a connection to the STP server
@@ -131,7 +98,10 @@ func (c *Client) Connect(ctx context.Context) error {
 }
 
 func (c *Client) connectOnce(ctx context.Context) error {
-	sni := c.getSNI()
+	sni := c.config.SNI
+	if sni == "" {
+		sni = "www.cloudflare.com"
+	}
 
 	var conn net.Conn
 	var err error
@@ -147,9 +117,9 @@ func (c *Client) connectOnce(ctx context.Context) error {
 	}
 
 	handshakeConfig := &HandshakeConfig{
-		Password: c.config.Password,
-		SNI:      sni,
-		Timeout:  c.config.HandshakeTimeout,
+		UUID:    c.config.UUID,
+		SNI:     sni,
+		Timeout: c.config.HandshakeTimeout,
 	}
 
 	handshaker, err := NewClientHandshaker(handshakeConfig)
@@ -209,6 +179,8 @@ func (c *Client) OpenStream(ctx context.Context, network, address string) (*Stre
 }
 
 // DialContext establishes a connection to the target through the STP tunnel
+// For TCP: Returns a TCPStreamConn wrapper that reads the server response on first Read()
+// For UDP: Returns the stream directly (no stream response for UDP)
 func (c *Client) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
 	stream, err := c.OpenStream(ctx, network, address)
 	if err != nil {
@@ -222,6 +194,11 @@ func (c *Client) DialContext(ctx context.Context, network, address string) (net.
 		}
 	}
 
+	// For TCP: wrap with TCPStreamConn for delayed response reading
+	// For UDP: return stream directly (no stream response)
+	if network == "tcp" {
+		return NewTCPStreamConn(stream), nil
+	}
 	return stream, nil
 }
 

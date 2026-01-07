@@ -36,14 +36,47 @@ const (
 
 // Handshake errors
 var (
-	ErrInvalidPassword      = errors.New("handshake: password cannot be empty")
-	ErrInvalidRecordType    = errors.New("handshake: invalid TLS record type")
+	// ErrInvalidUUID is returned when the UUID is empty or invalid
+	ErrInvalidUUID = errors.New("handshake: UUID cannot be empty")
+
+	// ErrInvalidSNI is returned when the SNI is empty
+	ErrInvalidSNI = errors.New("handshake: SNI cannot be empty")
+
+	// ErrInvalidRecordType is returned when TLS record type is not handshake
+	ErrInvalidRecordType = errors.New("handshake: invalid TLS record type")
+
+	// ErrInvalidHandshakeType is returned when handshake type is unexpected
 	ErrInvalidHandshakeType = errors.New("handshake: invalid handshake type")
-	ErrInvalidKeyShare      = errors.New("handshake: invalid key share data")
+
+	// ErrInvalidVersion is returned when TLS version is not supported
+	ErrInvalidVersion = errors.New("handshake: unsupported TLS version")
+
+	// ErrMissingExtension is returned when a required extension is missing
+	ErrMissingExtension = errors.New("handshake: required extension missing")
+
+	// ErrInvalidKeyShare is returned when key share data is invalid
+	ErrInvalidKeyShare = errors.New("handshake: invalid key share data")
+
+	// ErrAuthenticationFailed is returned when HMAC verification fails
 	ErrAuthenticationFailed = errors.New("handshake: authentication failed")
-	ErrMessageTooShort      = errors.New("handshake: message too short")
-	ErrMessageTooLong       = errors.New("handshake: message too long")
-	ErrKeyDerivationFailed  = errors.New("handshake: key derivation failed")
+
+	// ErrReplayAttack is returned when nonce replay is detected
+	ErrReplayAttack = errors.New("handshake: replay attack detected")
+
+	// ErrMessageTooShort is returned when message is too short
+	ErrMessageTooShort = errors.New("handshake: message too short")
+
+	// ErrMessageTooLong is returned when message exceeds maximum size
+	ErrMessageTooLong = errors.New("handshake: message too long")
+
+	// ErrHandshakeTimeout is returned when handshake times out
+	ErrHandshakeTimeout = errors.New("handshake: timeout")
+
+	// ErrConnectionClosed is returned when connection is closed during handshake
+	ErrConnectionClosed = errors.New("handshake: connection closed")
+
+	// ErrKeyDerivationFailed is returned when key derivation fails
+	ErrKeyDerivationFailed = errors.New("handshake: key derivation failed")
 )
 
 // ClientHelloInfo contains parsed ClientHello information
@@ -81,16 +114,15 @@ type HandshakeResult struct {
 
 // HandshakeConfig contains configuration for handshake
 type HandshakeConfig struct {
-	Password     string
-	SNI          string
-	FallbackAddr string
-	Timeout      time.Duration
+	UUID    string
+	SNI     string
+	Timeout time.Duration
 }
 
 // Validate validates the handshake configuration
 func (c *HandshakeConfig) Validate() error {
-	if c.Password == "" {
-		return ErrInvalidPassword
+	if c.UUID == "" {
+		return ErrInvalidUUID
 	}
 	return nil
 }
@@ -122,7 +154,7 @@ func (h *ClientHandshaker) Handshake(conn net.Conn) (*HandshakeResult, error) {
 		return nil, fmt.Errorf("failed to generate key pair: %w", err)
 	}
 
-	authData, err := GenerateAuthData(h.config.Password)
+	authData, err := GenerateAuthData(h.config.UUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate auth data: %w", err)
 	}

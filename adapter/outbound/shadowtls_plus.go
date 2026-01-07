@@ -24,16 +24,12 @@ type ShadowTLSPlus struct {
 
 type ShadowTLSPlusOption struct {
 	BasicOption
-	Name     string   `proxy:"name"`
-	Server   string   `proxy:"server"`
-	Port     int      `proxy:"port"`
-	Password string   `proxy:"password"`
-	UDP      bool     `proxy:"udp,omitempty"`
-	SNIList  []string `proxy:"sni-list,omitempty"`
-
-	// SNI rotation settings
-	SNIRotateMode string `proxy:"sni-rotate-mode,omitempty"` // "random" or "round_robin"
-	SNIRotateFreq string `proxy:"sni-rotate-freq,omitempty"` // "per_connection" or "per_minute"
+	Name   string `proxy:"name"`
+	Server string `proxy:"server"`
+	Port   int    `proxy:"port"`
+	UUID   string `proxy:"uuid"`
+	UDP    bool   `proxy:"udp,omitempty"`
+	SNI    string `proxy:"sni,omitempty"`
 
 	// Timeouts
 	HandshakeTimeout int `proxy:"handshake-timeout,omitempty"` // in seconds
@@ -126,18 +122,10 @@ func (s *ShadowTLSPlus) getClient() (*stp.Client, error) {
 }
 
 func (s *ShadowTLSPlus) createClient() (*stp.Client, error) {
-	config := stp.DefaultClientConfig(s.addr, s.option.Password)
+	config := stp.DefaultClientConfig(s.addr, s.option.UUID)
 
-	if len(s.option.SNIList) > 0 {
-		config.SNIList = s.option.SNIList
-	}
-
-	if s.option.SNIRotateMode != "" {
-		config.SNIRotateMode = s.option.SNIRotateMode
-	}
-
-	if s.option.SNIRotateFreq != "" {
-		config.SNIRotateFreq = s.option.SNIRotateFreq
+	if s.option.SNI != "" {
+		config.SNI = s.option.SNI
 	}
 
 	if s.option.HandshakeTimeout > 0 {
@@ -190,8 +178,8 @@ func (pc *shadowTLSPlusPacketConn) WriteTo(p []byte, addr net.Addr) (n int, err 
 func NewShadowTLSPlus(option ShadowTLSPlusOption) (*ShadowTLSPlus, error) {
 	addr := net.JoinHostPort(option.Server, strconv.Itoa(option.Port))
 
-	if option.Password == "" {
-		return nil, fmt.Errorf("shadowtls-plus: password is required")
+	if option.UUID == "" {
+		return nil, fmt.Errorf("shadowtls-plus: uuid is required")
 	}
 
 	s := &ShadowTLSPlus{

@@ -34,8 +34,38 @@ const (
 
 // Mux errors
 var (
+	// ErrSessionClosed is returned when the session is closed
 	ErrSessionClosed = errors.New("mux: session closed")
-	ErrStreamClosed  = errors.New("mux: stream closed")
+
+	// ErrStreamClosed is returned when the stream is closed
+	ErrStreamClosed = errors.New("mux: stream closed")
+
+	// ErrStreamReset is returned when the stream was reset
+	ErrStreamReset = errors.New("mux: stream reset by peer")
+
+	// ErrMaxStreamsExceeded is returned when max streams limit is reached
+	ErrMaxStreamsExceeded = errors.New("mux: maximum streams exceeded")
+
+	// ErrStreamNotFound is returned when stream doesn't exist
+	ErrStreamNotFound = errors.New("mux: stream not found")
+
+	// ErrInvalidStreamID is returned for invalid stream ID
+	ErrInvalidStreamID = errors.New("mux: invalid stream ID")
+
+	// ErrFlowControl is returned when flow control window is exhausted
+	ErrFlowControl = errors.New("mux: flow control window exhausted")
+
+	// ErrTimeout is returned when operation times out
+	ErrTimeout = errors.New("mux: operation timeout")
+
+	// ErrWriteAfterClose is returned when writing to closed stream
+	ErrWriteAfterClose = errors.New("mux: write after close")
+
+	// ErrInvalidState is returned when stream is in invalid state
+	ErrInvalidState = errors.New("mux: invalid stream state")
+
+	// ErrGoaway is returned when GOAWAY was received
+	ErrGoaway = errors.New("mux: received GOAWAY")
 )
 
 // SessionConfig contains configuration for a multiplexed session
@@ -564,3 +594,244 @@ type netAddr struct {
 
 func (a *netAddr) Network() string { return a.network }
 func (a *netAddr) String() string  { return a.address }
+
+// Stream response types (sent at the beginning of stream data)
+const (
+	// StreamResponseOK indicates the stream was successfully established
+	StreamResponseOK byte = 0x00
+	// StreamResponseError indicates an error occurred
+	StreamResponseError byte = 0x01
+)
+
+// StreamError represents an error response from the server
+type StreamError struct {
+	Code    byte
+	Message string
+}
+
+// Error implements the error interface
+func (e *StreamError) Error() string {
+	if e.Message != "" {
+		return e.Message
+	}
+	return "stream error: code " + string(rune('0'+e.Code))
+}
+
+// WriteStreamError writes an error response to the stream
+// This should be called by the server when it cannot fulfill the stream request
+// Format: [Type(1B)][ErrorCode(1B)][MsgLen(2B)][Message(variable)]
+func WriteStreamError(s *Stream, code byte, message string) error {
+	msgBytes := []byte(message)
+	buf := make([]byte, 4+len(msgBytes))
+	buf[0] = StreamResponseError
+	buf[1] = code
+	binary.BigEndian.PutUint16(buf[2:4], uint16(len(msgBytes)))
+	copy(buf[4:], msgBytes)
+
+	_, err := s.Write(buf)
+	return err
+}
+
+// WriteStreamOK writes a success response to the stream
+// This should be called by the server when it successfully establishes the connection
+func WriteStreamOK(s *Stream) error {
+	_, err := s.Write([]byte{StreamResponseOK})
+	return err
+}
+
+// ReadStreamResponse reads the initial response from the server
+// Returns nil if successful, or a StreamError if the server reported an error
+func ReadStreamResponse(s *Stream) error {
+	// Read response type
+	typeBuf := make([]byte, 1)
+	if _, err := io.ReadFull(s, typeBuf); err != nil {
+		return err
+	}
+
+	if typeBuf[0] == StreamResponseOK {
+		return nil
+	}
+
+	if typeBuf[0] != StreamResponseError {
+		return &StreamError{Code: 0xFF, Message: "invalid response type"}
+	}
+
+	// Read error code and message length
+	header := make([]byte, 3)
+	if _, err := io.ReadFull(s, header); err != nil {
+		return err
+	}
+
+	code := header[0]
+	msgLen := binary.BigEndian.Uint16(header[1:3])
+
+	var message string
+	if msgLen > 0 {
+		msgBuf := make([]byte, msgLen)
+		if _, err := io.ReadFull(s, msgBuf); err != nil {
+			return err
+		}
+		message = string(msgBuf)
+	}
+
+	return &StreamError{Code: code, Message: message}
+}
+
+// TCPStreamConn wraps a Stream for TCP connections with delayed response reading.
+// The server's response (0x00 for success, 0x01+error for failure) is read on the
+// first Read() call, eliminating the extra RTT of waiting for response before sending data.
+type TCPStreamConn struct {
+	stream *Stream
+
+	// responseOnce ensures we only read the response once
+	responseOnce sync.Once
+	// responseErr stores any error from reading the response
+	responseErr error
+	// leftover stores any data read after the response byte
+	leftover []byte
+}
+
+// NewTCPStreamConn creates a new TCPStreamConn wrapper
+func NewTCPStreamConn(stream *Stream) *TCPStreamConn {
+	return &TCPStreamConn{
+		stream: stream,
+	}
+}
+
+// Read reads data from the stream, parsing the response on first call
+func (c *TCPStreamConn) Read(p []byte) (int, error) {
+	// On first read, parse the stream response
+	c.responseOnce.Do(func() {
+		c.responseErr = c.readResponse()
+	})
+
+	if c.responseErr != nil {
+		return 0, c.responseErr
+	}
+
+	// Return any leftover data first
+	if len(c.leftover) > 0 {
+		n := copy(p, c.leftover)
+		c.leftover = c.leftover[n:]
+		return n, nil
+	}
+
+	return c.stream.Read(p)
+}
+
+// readResponse reads and parses the stream response
+func (c *TCPStreamConn) readResponse() error {
+	// Read response type (1 byte minimum)
+	// We use a larger buffer to potentially capture data following the response
+	buf := make([]byte, 4096)
+	n, err := c.stream.Read(buf)
+	if err != nil {
+		return err
+	}
+
+	if n == 0 {
+		return io.EOF
+	}
+
+	// Check response type
+	responseType := buf[0]
+
+	if responseType == StreamResponseOK {
+		// Success - any remaining bytes are application data
+		if n > 1 {
+			c.leftover = make([]byte, n-1)
+			copy(c.leftover, buf[1:n])
+		}
+		return nil
+	}
+
+	if responseType != StreamResponseError {
+		return &StreamError{Code: 0xFF, Message: "invalid response type"}
+	}
+
+	// Error response: [Type(1B)][ErrorCode(1B)][MsgLen(2B)][Message]
+	// We need at least 4 bytes for the header
+	if n < 4 {
+		// Need to read more
+		remaining := make([]byte, 4-n)
+		if _, err := io.ReadFull(c.stream, remaining); err != nil {
+			return err
+		}
+		// Combine buffers
+		header := make([]byte, 4)
+		copy(header, buf[:n])
+		copy(header[n:], remaining)
+		buf = header
+		n = 4
+	}
+
+	code := buf[1]
+	msgLen := binary.BigEndian.Uint16(buf[2:4])
+
+	var message string
+	if msgLen > 0 {
+		// Calculate how much of the message we already have
+		msgStart := 4
+		available := n - msgStart
+		if available < int(msgLen) {
+			// Need to read more of the message
+			msgBuf := make([]byte, msgLen)
+			if available > 0 {
+				copy(msgBuf, buf[msgStart:n])
+			}
+			if _, err := io.ReadFull(c.stream, msgBuf[available:]); err != nil {
+				return err
+			}
+			message = string(msgBuf)
+		} else {
+			message = string(buf[msgStart : msgStart+int(msgLen)])
+		}
+	}
+
+	return &StreamError{Code: code, Message: message}
+}
+
+// Write writes data to the stream
+func (c *TCPStreamConn) Write(p []byte) (int, error) {
+	return c.stream.Write(p)
+}
+
+// Close closes the stream
+func (c *TCPStreamConn) Close() error {
+	return c.stream.Close()
+}
+
+// SetDeadline sets the read and write deadlines
+func (c *TCPStreamConn) SetDeadline(t time.Time) error {
+	return c.stream.SetDeadline(t)
+}
+
+// SetReadDeadline sets the read deadline
+func (c *TCPStreamConn) SetReadDeadline(t time.Time) error {
+	return c.stream.SetReadDeadline(t)
+}
+
+// SetWriteDeadline sets the write deadline
+func (c *TCPStreamConn) SetWriteDeadline(t time.Time) error {
+	return c.stream.SetWriteDeadline(t)
+}
+
+// LocalAddr returns the local network address
+func (c *TCPStreamConn) LocalAddr() net.Addr {
+	return c.stream.LocalAddr()
+}
+
+// RemoteAddr returns the remote network address
+func (c *TCPStreamConn) RemoteAddr() net.Addr {
+	return c.stream.RemoteAddr()
+}
+
+// CloseWrite closes the write side of the stream
+func (c *TCPStreamConn) CloseWrite() error {
+	// The underlying smux stream doesn't support half-close,
+	// so we just return nil
+	return nil
+}
+
+// Verify TCPStreamConn implements net.Conn
+var _ net.Conn = (*TCPStreamConn)(nil)

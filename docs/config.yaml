@@ -1078,17 +1078,9 @@ proxies: # socks5
     type: shadowtls-plus
     server: server.com
     port: 443
-    password: "<your password>"  # 必填，认证密码
+    uuid: "<your uuid>"          # 必填，用户认证标识符
     udp: true                    # 可选，是否启用 UDP 支持
-    sni-list:                    # 必填，SNI 伪装列表
-      - time.cloudflare.com
-      - shopify.com
-      - time.is
-      - icook.hk
-      - www.visa.com
-      - www.digitalocean.com
-    # sni-rotate-mode: random    # 可选，SNI 轮换模式: random(默认) 或 round_robin
-    # sni-rotate-freq: per_connection  # 可选，轮换频率: per_connection(默认) 或 per_minute
+    sni: "www.cloudflare.com"    # 可选，SNI 伪装域名，默认 www.cloudflare.com
     # handshake-timeout: 30      # 可选，握手超时时间（秒）
     # idle-timeout: 60           # 可选，空闲超时时间（秒）
     # dial-timeout: 30           # 可选，连接超时时间（秒）
