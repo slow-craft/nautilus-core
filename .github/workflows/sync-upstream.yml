@@ -15,7 +15,26 @@ jobs:
           ref: Meta
           fetch-depth: 0
 
+      - name: Get latest upstream tag
+        id: upstream_tag
+        run: |
+          LATEST_TAG=$(git ls-remote --tags --sort=-v:refname https://github.com/MetaCubeX/mihomo.git | head -n1 | sed 's/.*refs\/tags\///')
+          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Latest upstream tag: $LATEST_TAG"
+
+      - name: Check if tag exists locally
+        id: check_tag
+        run: |
+          if git rev-parse "refs/tags/${{ steps.upstream_tag.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag ${{ steps.upstream_tag.outputs.tag }} already exists locally"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Tag ${{ steps.upstream_tag.outputs.tag }} is new"
+          fi
+
       - name: Sync upstream changes
+        if: steps.check_tag.outputs.exists == 'false'
         id: sync
         uses: aormber/Fork-Sync-With-Upstream-action@v1.4.1
         with:
@@ -23,19 +42,20 @@ jobs:
           target_repo_token: ${{ secrets.GITHUB_TOKEN }}
           upstream_sync_branch: Meta
           upstream_sync_repo: MetaCubeX/mihomo
-          test_branch_name: sync-upstream-${{ github.run_id }}
+          test_branch_name: sync-upstream-${{ steps.upstream_tag.outputs.tag }}
           test_mode: true
 
       - name: Create Pull Request
-        if: steps.sync.outputs.has_new_commits == 'true'
+        if: steps.check_tag.outputs.exists == 'false' && steps.sync.outputs.has_new_commits == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: sync-upstream-${{ github.run_id }}
+          branch: sync-upstream-${{ steps.upstream_tag.outputs.tag }}
           base: Meta
-          title: "chore: sync upstream changes from MetaCubeX/mihomo"
+          title: "chore: sync upstream ${{ steps.upstream_tag.outputs.tag }}"
           body: |
             Automated PR to sync changes from upstream repository.
 
-            Upstream: MetaCubeX/mihomo (Alpha branch)
+            Upstream: MetaCubeX/mihomo (Meta branch)
+            New tag: ${{ steps.upstream_tag.outputs.tag }}
           labels: sync-upstream
