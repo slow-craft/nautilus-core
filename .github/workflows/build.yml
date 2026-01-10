@@ -238,16 +238,23 @@ jobs:
 
     - name: Set variables
       run: |
-        # Extract version suffix from constant/version.go (e.g., +shadowtls-plus.0.1.0)
-        VERSION_SUFFIX=$(grep 'Version' constant/version.go | grep -oE '\+[^"]+' || echo "")
+        # For tag pushes, use the tag name directly
+        # For branch pushes, use branch name + short commit hash
+        if [[ "${{ github.ref_type }}" == "tag" ]]; then
+          VERSION="${GITHUB_REF_NAME}"
+        else
+          VERSION="${GITHUB_REF_NAME,,}-$(git rev-parse --short HEAD)"
+          VERSION="${VERSION//\//-}"
+        fi
 
-        VERSION="${GITHUB_REF_NAME,,}-$(git rev-parse --short HEAD)${VERSION_SUFFIX}"
-        VERSION="${VERSION//\//-}"
-        PackageVersion="$(curl -s "https://api.github.com/repos/MetaCubeX/mihomo/releases/latest" | jq -r '.tag_name' | sed 's/v//g' | awk -F '.' '{$NF = $NF + 1; print}' OFS='.').${VERSION/-/.}"
+        PackageVersion="${VERSION#v}"
+
+        # For workflow_dispatch, use the provided version
         if [ -n "${{ github.event.inputs.version }}" ]; then
-          VERSION="${{ github.event.inputs.version }}${VERSION_SUFFIX}"
+          VERSION="${{ github.event.inputs.version }}"
           PackageVersion="${VERSION#v}"
         fi
+
         echo "VERSION=${VERSION}" >> $GITHUB_ENV
         echo "PackageVersion=${PackageVersion}" >> $GITHUB_ENV
       
