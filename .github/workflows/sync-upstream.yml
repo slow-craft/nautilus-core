@@ -12,16 +12,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: Alpha
+          ref: Meta
           fetch-depth: 0
 
       - name: Sync upstream changes
         id: sync
         uses: aormber/Fork-Sync-With-Upstream-action@v1.4.1
         with:
-          target_sync_branch: Alpha
+          target_sync_branch: Meta
           target_repo_token: ${{ secrets.GITHUB_TOKEN }}
-          upstream_sync_branch: Alpha
+          upstream_sync_branch: Meta
           upstream_sync_repo: MetaCubeX/mihomo
           test_branch_name: sync-upstream-${{ github.run_id }}
           test_mode: true
@@ -32,7 +32,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: sync-upstream-${{ github.run_id }}
-          base: Alpha
+          base: Meta
           title: "chore: sync upstream changes from MetaCubeX/mihomo"
           body: |
             Automated PR to sync changes from upstream repository.
