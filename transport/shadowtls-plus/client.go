@@ -8,14 +8,6 @@ import (
 	"time"
 )
 
-// Client is the STP client that provides proxy functionality
-type Client struct {
-	config  *ClientConfig
-	mu      sync.Mutex
-	session *Session
-	conn    net.Conn
-}
-
 // ClientConfig contains client configuration
 type ClientConfig struct {
 	ServerAddr string
@@ -30,11 +22,51 @@ type ClientConfig struct {
 
 	// Dialer is an optional custom dialer
 	Dialer ContextDialer
+
+	// UDP configuration for dual-stack
+	UDP *UDPClientConfig
 }
 
-// ContextDialer is an interface for dialers that support context
-type ContextDialer interface {
-	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+// UDPClientConfig contains UDP-specific client configuration
+type UDPClientConfig struct {
+	// Enabled enables UDP transport (default: false for backward compatibility)
+	Enabled bool
+
+	// DialTimeout is the UDP dial timeout (default: 5s for fast failover)
+	DialTimeout time.Duration
+
+	// HandshakeTimeout is the UDP handshake timeout (default: 5s for fast failover)
+	HandshakeTimeout time.Duration
+
+	// RetryTimes is the number of UDP retry attempts (default: 1 for fast failover)
+	RetryTimes int
+
+	// KCP contains KCP protocol configuration
+	KCP *KCPConfig
+
+	// Strategy contains dual-stack strategy configuration
+	Strategy *StrategyConfig
+}
+
+// StrategyConfig contains dual-stack strategy configuration
+type StrategyConfig struct {
+	// Primary is the preferred protocol: auto/tcp/udp
+	Primary string
+
+	// RTTThreshold is the RTT threshold for switching
+	RTTThreshold time.Duration
+
+	// FailureThreshold is the number of consecutive failures before switching
+	FailureThreshold int
+
+	// RecoveryInterval is the time to wait before retrying failed transport
+	RecoveryInterval time.Duration
+
+	// WarmupBoth enables connecting both transports at startup
+	WarmupBoth bool
+
+	// HealthCheckInterval is the interval for health checks
+	HealthCheckInterval time.Duration
 }
 
 // DefaultClientConfig returns a default client configuration
@@ -51,6 +83,45 @@ func DefaultClientConfig(serverAddr, uuid string) *ClientConfig {
 	}
 }
 
+// DefaultUDPClientConfig returns default UDP client configuration
+func DefaultUDPClientConfig() *UDPClientConfig {
+	return &UDPClientConfig{
+		Enabled:          false,
+		DialTimeout:      5 * time.Second,
+		HandshakeTimeout: 5 * time.Second,
+		RetryTimes:       1,
+		KCP:              DefaultKCPConfig(),
+		Strategy:         DefaultStrategyConfig(),
+	}
+}
+
+// DefaultStrategyConfig returns default strategy configuration
+func DefaultStrategyConfig() *StrategyConfig {
+	return &StrategyConfig{
+		Primary:             "auto",
+		RTTThreshold:        500 * time.Millisecond,
+		FailureThreshold:    3,
+		RecoveryInterval:    30 * time.Second,
+		WarmupBoth:          true,
+		HealthCheckInterval: 30 * time.Second,
+	}
+}
+
+// Client is the STP client that provides proxy functionality
+// It supports both single TCP mode and dual-stack TCP/UDP mode
+type Client struct {
+	config *ClientConfig
+	mu     sync.Mutex
+
+	// Single mode (TCP only)
+	session *Session
+	conn    net.Conn
+
+	// Dual-stack mode
+	manager     *TransportManager
+	dualEnabled bool
+}
+
 // NewClient creates a new STP client
 func NewClient(config *ClientConfig) (*Client, error) {
 	if config.ServerAddr == "" {
@@ -60,9 +131,16 @@ func NewClient(config *ClientConfig) (*Client, error) {
 		return nil, fmt.Errorf("client: UUID required")
 	}
 
-	return &Client{
+	client := &Client{
 		config: config,
-	}, nil
+	}
+
+	// Check if dual-stack is enabled
+	if config.UDP != nil && config.UDP.Enabled {
+		client.dualEnabled = true
+	}
+
+	return client, nil
 }
 
 // Connect establishes a connection to the STP server
@@ -70,6 +148,14 @@ func (c *Client) Connect(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.dualEnabled {
+		return c.connectDualStack(ctx)
+	}
+	return c.connectTCPOnly(ctx)
+}
+
+// connectTCPOnly connects using TCP only (backward compatible)
+func (c *Client) connectTCPOnly(ctx context.Context) error {
 	if c.session != nil && !c.session.IsClosed() {
 		return nil
 	}
@@ -151,23 +237,130 @@ func (c *Client) connectOnce(ctx context.Context) error {
 	return nil
 }
 
+// connectDualStack connects using both TCP and UDP
+func (c *Client) connectDualStack(ctx context.Context) error {
+	if c.manager != nil {
+		// Already initialized
+		return nil
+	}
+
+	// Create TCP transport
+	tcpConfig := &TCPConfig{
+		TransportConfig: &TransportConfig{
+			ServerAddr:       c.config.ServerAddr,
+			UUID:             c.config.UUID,
+			SNI:              c.config.SNI,
+			HandshakeTimeout: c.config.HandshakeTimeout,
+			DialTimeout:      c.config.DialTimeout,
+			RetryTimes:       c.config.RetryTimes,
+			IdleTimeout:      c.config.IdleTimeout,
+			PingInterval:     30 * time.Second,
+			Dialer:           c.config.Dialer,
+		},
+		SessionConfig: c.config.SessionConfig,
+	}
+
+	tcpTransport, err := NewTCPTransport(tcpConfig)
+	if err != nil {
+		return fmt.Errorf("client: failed to create TCP transport: %w", err)
+	}
+
+	// Create UDP transport
+	udpCfg := c.config.UDP
+	if udpCfg == nil {
+		udpCfg = DefaultUDPClientConfig()
+	}
+
+	udpConfig := &UDPConfig{
+		TransportConfig: &TransportConfig{
+			ServerAddr:       c.config.ServerAddr,
+			UUID:             c.config.UUID,
+			SNI:              c.config.SNI,
+			HandshakeTimeout: udpCfg.HandshakeTimeout,
+			DialTimeout:      udpCfg.DialTimeout,
+			RetryTimes:       udpCfg.RetryTimes,
+			IdleTimeout:      c.config.IdleTimeout,
+			PingInterval:     30 * time.Second,
+			// Note: UDP doesn't use the custom dialer since KCP handles its own connection
+		},
+		KCP:           udpCfg.KCP,
+		SessionConfig: c.config.SessionConfig,
+	}
+
+	udpTransport, err := NewUDPTransport(udpConfig)
+	if err != nil {
+		_ = tcpTransport.Close()
+		return fmt.Errorf("client: failed to create UDP transport: %w", err)
+	}
+
+	// Create manager config from strategy
+	strategy := udpCfg.Strategy
+	if strategy == nil {
+		strategy = DefaultStrategyConfig()
+	}
+
+	managerConfig := &ManagerConfig{
+		SelectionMode:       parseSelectionMode(strategy.Primary),
+		RTTThreshold:        strategy.RTTThreshold,
+		FailureThreshold:    strategy.FailureThreshold,
+		RecoveryInterval:    strategy.RecoveryInterval,
+		WarmupBoth:          strategy.WarmupBoth,
+		HealthCheckInterval: strategy.HealthCheckInterval,
+	}
+
+	// Create transport manager
+	manager, err := NewTransportManager(tcpTransport, udpTransport, managerConfig)
+	if err != nil {
+		_ = tcpTransport.Close()
+		_ = udpTransport.Close()
+		return fmt.Errorf("client: failed to create transport manager: %w", err)
+	}
+
+	// Start the manager
+	if err := manager.Start(ctx); err != nil {
+		_ = manager.Close()
+		return fmt.Errorf("client: failed to start transport manager: %w", err)
+	}
+
+	c.manager = manager
+	return nil
+}
+
+// parseSelectionMode converts string to SelectionMode
+func parseSelectionMode(mode string) SelectionMode {
+	switch mode {
+	case "tcp":
+		return SelectionModeTCPFirst
+	case "udp":
+		return SelectionModeUDPFirst
+	default:
+		return SelectionModeAuto
+	}
+}
+
 // OpenStream opens a new stream to the target address
 func (c *Client) OpenStream(ctx context.Context, network, address string) (*Stream, error) {
-	if err := c.Connect(ctx); err != nil {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.dualEnabled {
+		return c.openStreamDualStack(ctx, network, address)
+	}
+	return c.openStreamTCPOnly(ctx, network, address)
+}
+
+// openStreamTCPOnly opens stream using TCP only
+func (c *Client) openStreamTCPOnly(ctx context.Context, network, address string) (*Stream, error) {
+	if err := c.connectTCPOnly(ctx); err != nil {
 		return nil, err
 	}
 
-	c.mu.Lock()
 	session := c.session
-	c.mu.Unlock()
-
 	if session == nil || session.IsClosed() {
-		if err := c.Connect(ctx); err != nil {
+		if err := c.connectTCPOnly(ctx); err != nil {
 			return nil, err
 		}
-		c.mu.Lock()
 		session = c.session
-		c.mu.Unlock()
 	}
 
 	addr, err := ParseAddress(network, address)
@@ -178,11 +371,43 @@ func (c *Client) OpenStream(ctx context.Context, network, address string) (*Stre
 	return session.OpenStream(addr)
 }
 
+// openStreamDualStack opens stream using dual-stack manager
+func (c *Client) openStreamDualStack(ctx context.Context, network, address string) (*Stream, error) {
+	if err := c.connectDualStack(ctx); err != nil {
+		return nil, err
+	}
+
+	conn, err := c.manager.OpenStream(network, address)
+	if err != nil {
+		return nil, err
+	}
+
+	// The manager returns net.Conn which is actually *Stream
+	stream, ok := conn.(*Stream)
+	if !ok {
+		// Wrap it if needed
+		return nil, fmt.Errorf("transport: unexpected connection type")
+	}
+
+	return stream, nil
+}
+
 // DialContext establishes a connection to the target through the STP tunnel
 // For TCP: Returns a TCPStreamConn wrapper that reads the server response on first Read()
 // For UDP: Returns the stream directly (no stream response for UDP)
 func (c *Client) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
-	stream, err := c.OpenStream(ctx, network, address)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.dualEnabled {
+		return c.dialContextDualStack(ctx, network, address)
+	}
+	return c.dialContextTCPOnly(ctx, network, address)
+}
+
+// dialContextTCPOnly dials using TCP only
+func (c *Client) dialContextTCPOnly(ctx context.Context, network, address string) (net.Conn, error) {
+	stream, err := c.openStreamTCPOnly(ctx, network, address)
 	if err != nil {
 		return nil, err
 	}
@@ -202,14 +427,47 @@ func (c *Client) DialContext(ctx context.Context, network, address string) (net.
 	return stream, nil
 }
 
+// dialContextDualStack dials using dual-stack manager
+func (c *Client) dialContextDualStack(ctx context.Context, network, address string) (net.Conn, error) {
+	if err := c.connectDualStack(ctx); err != nil {
+		return nil, err
+	}
+
+	conn, err := c.manager.OpenStream(network, address)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.config.IdleTimeout > 0 {
+		if err := conn.SetDeadline(time.Now().Add(c.config.IdleTimeout)); err != nil {
+			_ = conn.Close()
+			return nil, fmt.Errorf("client: failed to set deadline: %w", err)
+		}
+	}
+
+	// For TCP: wrap with TCPStreamConn for delayed response reading
+	// For UDP: return stream directly (no stream response)
+	if network == "tcp" {
+		if stream, ok := conn.(*Stream); ok {
+			return NewTCPStreamConn(stream), nil
+		}
+	}
+	return conn, nil
+}
+
 // Stats returns the current connection statistics
 func (c *Client) Stats() SessionStats {
 	c.mu.Lock()
-	session := c.session
-	c.mu.Unlock()
+	defer c.mu.Unlock()
 
-	if session != nil {
-		return session.Stats()
+	if c.dualEnabled && c.manager != nil {
+		// For dual-stack, return combined stats or TCP stats
+		// Currently we just return empty stats, could be enhanced
+		return SessionStats{}
+	}
+
+	if c.session != nil {
+		return c.session.Stats()
 	}
 	return SessionStats{}
 }
@@ -218,6 +476,10 @@ func (c *Client) Stats() SessionStats {
 func (c *Client) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if c.dualEnabled && c.manager != nil {
+		return c.manager.Close()
+	}
 
 	if c.session != nil {
 		_ = c.session.Close()
@@ -233,8 +495,11 @@ func (c *Client) Close() error {
 // IsClosed returns whether the client session is closed
 func (c *Client) IsClosed() bool {
 	c.mu.Lock()
-	session := c.session
-	c.mu.Unlock()
+	defer c.mu.Unlock()
 
-	return session == nil || session.IsClosed()
+	if c.dualEnabled && c.manager != nil {
+		return c.manager.closed.Load()
+	}
+
+	return c.session == nil || c.session.IsClosed()
 }

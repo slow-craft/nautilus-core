@@ -36,6 +36,72 @@ type ShadowTLSPlusOption struct {
 	IdleTimeout      int `proxy:"idle-timeout,omitempty"`      // in seconds
 	DialTimeout      int `proxy:"dial-timeout,omitempty"`      // in seconds
 	RetryTimes       int `proxy:"retry-times,omitempty"`
+
+	// UDP/KCP transport configuration (for dual-stack support)
+	UDPTransport *UDPTransportOption `proxy:"udp-transport,omitempty"`
+}
+
+// UDPTransportOption contains UDP transport configuration
+type UDPTransportOption struct {
+	// Enabled enables UDP transport for dual-stack mode
+	Enabled bool `proxy:"enabled,omitempty"`
+
+	// DialTimeout is the UDP dial timeout in seconds (default: 5)
+	DialTimeout int `proxy:"dial-timeout,omitempty"`
+
+	// HandshakeTimeout is the UDP handshake timeout in seconds (default: 5)
+	HandshakeTimeout int `proxy:"handshake-timeout,omitempty"`
+
+	// RetryTimes is the number of UDP retry attempts (default: 1)
+	RetryTimes int `proxy:"retry-times,omitempty"`
+
+	// KCP contains KCP protocol configuration
+	KCP *KCPOption `proxy:"kcp,omitempty"`
+
+	// Strategy contains dual-stack strategy configuration
+	Strategy *StrategyOption `proxy:"strategy,omitempty"`
+}
+
+// KCPOption contains KCP protocol configuration
+type KCPOption struct {
+	// Mode is the KCP operation mode: fast/normal/default
+	Mode string `proxy:"mode,omitempty"`
+
+	// MTU is the maximum transmission unit (default: 1400)
+	MTU int `proxy:"mtu,omitempty"`
+
+	// SndWnd is the send window size (default: 1024)
+	SndWnd int `proxy:"snd-wnd,omitempty"`
+
+	// RcvWnd is the receive window size (default: 1024)
+	RcvWnd int `proxy:"rcv-wnd,omitempty"`
+
+	// DataShard is the number of data shards for FEC (0 to disable)
+	DataShard int `proxy:"data-shard,omitempty"`
+
+	// ParityShard is the number of parity shards for FEC (0 to disable)
+	ParityShard int `proxy:"parity-shard,omitempty"`
+}
+
+// StrategyOption contains dual-stack strategy configuration
+type StrategyOption struct {
+	// Primary is the preferred protocol: auto/tcp/udp
+	Primary string `proxy:"primary,omitempty"`
+
+	// RTTThreshold is the RTT threshold in milliseconds for switching (default: 500)
+	RTTThreshold int `proxy:"rtt-threshold,omitempty"`
+
+	// FailureThreshold is the number of consecutive failures before switching (default: 3)
+	FailureThreshold int `proxy:"failure-threshold,omitempty"`
+
+	// RecoveryInterval is the time in seconds to wait before retrying failed transport (default: 30)
+	RecoveryInterval int `proxy:"recovery-interval,omitempty"`
+
+	// WarmupBoth enables connecting both transports at startup (default: true)
+	WarmupBoth *bool `proxy:"warmup-both,omitempty"`
+
+	// HealthCheckInterval is the interval in seconds for health checks (default: 30)
+	HealthCheckInterval int `proxy:"health-check-interval,omitempty"`
 }
 
 // DialContext implements C.ProxyAdapter
@@ -144,10 +210,107 @@ func (s *ShadowTLSPlus) createClient() (*stp.Client, error) {
 		config.RetryTimes = s.option.RetryTimes
 	}
 
+	// Configure UDP transport if enabled
+	if s.option.UDPTransport != nil && s.option.UDPTransport.Enabled {
+		config.UDP = s.buildUDPConfig(s.option.UDPTransport)
+	}
+
 	// Use the adapter's dialer
 	config.Dialer = &stpDialerWrapper{dialer: s.dialer}
 
 	return stp.NewClient(config)
+}
+
+// buildUDPConfig builds UDP client configuration from options
+func (s *ShadowTLSPlus) buildUDPConfig(opt *UDPTransportOption) *stp.UDPClientConfig {
+	udpConfig := stp.DefaultUDPClientConfig()
+	udpConfig.Enabled = true
+
+	if opt.DialTimeout > 0 {
+		udpConfig.DialTimeout = time.Duration(opt.DialTimeout) * time.Second
+	}
+
+	if opt.HandshakeTimeout > 0 {
+		udpConfig.HandshakeTimeout = time.Duration(opt.HandshakeTimeout) * time.Second
+	}
+
+	if opt.RetryTimes > 0 {
+		udpConfig.RetryTimes = opt.RetryTimes
+	}
+
+	// Configure KCP
+	if opt.KCP != nil {
+		udpConfig.KCP = s.buildKCPConfig(opt.KCP)
+	}
+
+	// Configure strategy
+	if opt.Strategy != nil {
+		udpConfig.Strategy = s.buildStrategyConfig(opt.Strategy)
+	}
+
+	return udpConfig
+}
+
+// buildKCPConfig builds KCP configuration from options
+func (s *ShadowTLSPlus) buildKCPConfig(opt *KCPOption) *stp.KCPConfig {
+	kcpConfig := stp.DefaultKCPConfig()
+
+	if opt.Mode != "" {
+		kcpConfig.Mode = stp.KCPMode(opt.Mode)
+	}
+
+	if opt.MTU > 0 {
+		kcpConfig.MTU = opt.MTU
+	}
+
+	if opt.SndWnd > 0 {
+		kcpConfig.SndWnd = opt.SndWnd
+	}
+
+	if opt.RcvWnd > 0 {
+		kcpConfig.RcvWnd = opt.RcvWnd
+	}
+
+	if opt.DataShard > 0 {
+		kcpConfig.DataShard = opt.DataShard
+	}
+
+	if opt.ParityShard > 0 {
+		kcpConfig.ParityShard = opt.ParityShard
+	}
+
+	return kcpConfig
+}
+
+// buildStrategyConfig builds strategy configuration from options
+func (s *ShadowTLSPlus) buildStrategyConfig(opt *StrategyOption) *stp.StrategyConfig {
+	strategyConfig := stp.DefaultStrategyConfig()
+
+	if opt.Primary != "" {
+		strategyConfig.Primary = opt.Primary
+	}
+
+	if opt.RTTThreshold > 0 {
+		strategyConfig.RTTThreshold = time.Duration(opt.RTTThreshold) * time.Millisecond
+	}
+
+	if opt.FailureThreshold > 0 {
+		strategyConfig.FailureThreshold = opt.FailureThreshold
+	}
+
+	if opt.RecoveryInterval > 0 {
+		strategyConfig.RecoveryInterval = time.Duration(opt.RecoveryInterval) * time.Second
+	}
+
+	if opt.WarmupBoth != nil {
+		strategyConfig.WarmupBoth = *opt.WarmupBoth
+	}
+
+	if opt.HealthCheckInterval > 0 {
+		strategyConfig.HealthCheckInterval = time.Duration(opt.HealthCheckInterval) * time.Second
+	}
+
+	return strategyConfig
 }
 
 // stpDialerWrapper wraps C.Dialer to implement stp.ContextDialer
