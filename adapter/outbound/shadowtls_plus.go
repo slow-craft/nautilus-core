@@ -233,6 +233,11 @@ func (s *ShadowTLSPlus) createClient() (*stp.Client, error) {
 	// Apply transport configuration
 	if s.option.Transport != nil {
 		s.applyTransportConfig(config, s.option.Transport)
+	} else if s.option.UDP {
+		// When udp: true but no transport config, auto-enable UDP transport
+		// This matches the original client behavior where UDP is enabled by default
+		config.UDP = stp.DefaultUDPClientConfig()
+		config.UDP.Enabled = true
 	}
 
 	// Use the adapter's dialer

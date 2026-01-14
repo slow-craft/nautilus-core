@@ -141,6 +141,10 @@ func NewClient(config *ClientConfig) (*Client, error) {
 	// Check if dual-stack is enabled
 	if config.UDP != nil && config.UDP.Enabled {
 		client.dualEnabled = true
+		debugf("client created: server=%s, mode=dual-stack, strategy=%s",
+			config.ServerAddr, config.UDP.Strategy.Primary)
+	} else {
+		debugf("client created: server=%s, mode=tcp-only", config.ServerAddr)
 	}
 
 	return client, nil
@@ -192,6 +196,8 @@ func (c *Client) connectOnce(ctx context.Context) error {
 		sni = "www.cloudflare.com"
 	}
 
+	debugf("TCP connecting to %s (sni=%s)", c.config.ServerAddr, sni)
+
 	var conn net.Conn
 	var err error
 
@@ -202,8 +208,11 @@ func (c *Client) connectOnce(ctx context.Context) error {
 		conn, err = dialer.DialContext(ctx, "tcp", c.config.ServerAddr)
 	}
 	if err != nil {
+		debugf("TCP dial failed: %v", err)
 		return fmt.Errorf("transport: failed to dial server: %w", err)
 	}
+
+	debugf("TCP connected, starting handshake")
 
 	handshakeConfig := &HandshakeConfig{
 		UUID:    c.config.UUID,
@@ -220,8 +229,11 @@ func (c *Client) connectOnce(ctx context.Context) error {
 	result, err := handshaker.Handshake(conn)
 	if err != nil {
 		_ = conn.Close()
+		debugf("TCP handshake failed: %v", err)
 		return fmt.Errorf("transport: handshake failed: %w", err)
 	}
+
+	debugf("TCP handshake succeeded")
 
 	engine, err := NewCryptoEngine(result.Keys, true)
 	if err != nil {
@@ -237,6 +249,7 @@ func (c *Client) connectOnce(ctx context.Context) error {
 	}
 	c.session = session
 
+	debugf("TCP session established")
 	return nil
 }
 
@@ -407,6 +420,8 @@ func (c *Client) openStreamDualStack(ctx context.Context, network, address strin
 func (c *Client) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	debugf("DialContext: network=%s, address=%s, dual-stack=%v", network, address, c.dualEnabled)
 
 	if c.dualEnabled {
 		return c.dialContextDualStack(ctx, network, address)

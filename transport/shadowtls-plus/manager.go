@@ -106,6 +106,8 @@ func NewTransportManager(tcp, udp Transport, config *ManagerConfig) (*TransportM
 
 // Start starts the transport manager and connects available transports
 func (m *TransportManager) Start(ctx context.Context) error {
+	debugf("manager starting, mode=%v, warmup-both=%v", m.config.SelectionMode, m.config.WarmupBoth)
+
 	var wg sync.WaitGroup
 	var tcpErr, udpErr error
 
@@ -114,7 +116,13 @@ func (m *TransportManager) Start(ctx context.Context) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			debugf("TCP transport connecting...")
 			tcpErr = m.tcp.Connect(ctx)
+			if tcpErr != nil {
+				debugf("TCP transport connect failed: %v", tcpErr)
+			} else {
+				debugf("TCP transport connected")
+			}
 		}()
 	}
 
@@ -122,7 +130,13 @@ func (m *TransportManager) Start(ctx context.Context) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			debugf("UDP transport connecting...")
 			udpErr = m.udp.Connect(ctx)
+			if udpErr != nil {
+				debugf("UDP transport connect failed: %v", udpErr)
+			} else {
+				debugf("UDP transport connected")
+			}
 		}()
 	}
 
@@ -130,8 +144,11 @@ func (m *TransportManager) Start(ctx context.Context) error {
 
 	// At least one must succeed
 	if tcpErr != nil && udpErr != nil {
+		errorf("all transports failed: tcp=%v, udp=%v", tcpErr, udpErr)
 		return errors.New("transport: failed to connect any transport")
 	}
+
+	debugf("manager started, tcp=%v, udp=%v", tcpErr == nil, udpErr == nil)
 
 	// Start health check loop
 	go m.healthLoop(ctx)
@@ -148,17 +165,22 @@ func (m *TransportManager) OpenStream(network, address string) (net.Conn, error)
 	// Get the best transport based on current health
 	transport := m.selectBestTransport()
 	if transport == nil {
+		errorf("no available transport for %s://%s", network, address)
 		return nil, errors.New("transport: no available transport")
 	}
 
+	debugf("selected %s transport for %s://%s", transport.Protocol(), network, address)
+
 	conn, err := transport.OpenStream(network, address)
 	if err != nil {
+		debugf("%s transport open stream failed: %v", transport.Protocol(), err)
 		// Record failure
 		m.healthMon.RecordFailure(transport.Protocol())
 
 		// Try the other transport
 		alternative := m.getAlternative(transport)
 		if alternative != nil {
+			debugf("trying alternative %s transport", alternative.Protocol())
 			// Connect if not connected
 			if !alternative.IsConnected() {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -168,9 +190,11 @@ func (m *TransportManager) OpenStream(network, address string) (net.Conn, error)
 
 			conn, err = alternative.OpenStream(network, address)
 			if err == nil {
+				debugf("alternative %s transport succeeded", alternative.Protocol())
 				m.healthMon.RecordSuccess(alternative.Protocol())
 				return conn, nil
 			}
+			debugf("alternative %s transport also failed: %v", alternative.Protocol(), err)
 			m.healthMon.RecordFailure(alternative.Protocol())
 		}
 
@@ -189,13 +213,19 @@ func (m *TransportManager) selectBestTransport() Transport {
 	tcpAvailable := tcpHealth != nil && tcpHealth.Available && !m.healthMon.IsBlocked(ProtocolTCP)
 	udpAvailable := udpHealth != nil && udpHealth.Available && !m.healthMon.IsBlocked(ProtocolUDP)
 
+	debugf("transport status: tcp(available=%v, blocked=%v), udp(available=%v, blocked=%v)",
+		tcpHealth != nil && tcpHealth.Available, m.healthMon.IsBlocked(ProtocolTCP),
+		udpHealth != nil && udpHealth.Available, m.healthMon.IsBlocked(ProtocolUDP))
+
 	// Neither available - try to connect
 	if !tcpAvailable && !udpAvailable {
+		debugf("no transport available, trying to reconnect")
 		// Try to reconnect whichever is not blocked
 		if m.tcp != nil && !m.healthMon.IsBlocked(ProtocolTCP) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			if err := m.tcp.Connect(ctx); err == nil {
 				cancel()
+				debugf("TCP reconnected successfully")
 				return m.tcp
 			}
 			cancel()
@@ -204,6 +234,7 @@ func (m *TransportManager) selectBestTransport() Transport {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			if err := m.udp.Connect(ctx); err == nil {
 				cancel()
+				debugf("UDP reconnected successfully")
 				return m.udp
 			}
 			cancel()
@@ -213,34 +244,43 @@ func (m *TransportManager) selectBestTransport() Transport {
 
 	// Only one available
 	if tcpAvailable && !udpAvailable {
+		debugf("only TCP available")
 		return m.tcp
 	}
 	if udpAvailable && !tcpAvailable {
+		debugf("only UDP available")
 		return m.udp
 	}
 
 	// Both available - select based on mode and health
 	switch m.config.SelectionMode {
 	case SelectionModeTCPFirst:
+		debugf("both available, selecting TCP (tcp-first mode)")
 		return m.tcp
 	case SelectionModeUDPFirst:
+		debugf("both available, selecting UDP (udp-first mode)")
 		return m.udp
 	default:
 		// Auto mode: choose based on RTT
 		tcpRTT := m.getRTT(tcpHealth)
 		udpRTT := m.getRTT(udpHealth)
 
+		debugf("auto mode: tcp_rtt=%v, udp_rtt=%v", tcpRTT, udpRTT)
+
 		// If one has significantly better RTT (>20% difference), prefer it
 		if tcpRTT > 0 && udpRTT > 0 {
 			if tcpRTT < udpRTT*8/10 { // TCP is 20%+ faster
+				debugf("selecting TCP (20%% faster RTT)")
 				return m.tcp
 			}
 			if udpRTT < tcpRTT*8/10 { // UDP is 20%+ faster
+				debugf("selecting UDP (20%% faster RTT)")
 				return m.udp
 			}
 		}
 
 		// Default to TCP if RTTs are similar
+		debugf("selecting TCP (default, similar RTT)")
 		return m.tcp
 	}
 }

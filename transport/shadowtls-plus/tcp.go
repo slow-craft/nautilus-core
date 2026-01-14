@@ -191,6 +191,8 @@ func (t *TCPTransport) Connect(ctx context.Context) error {
 
 // connectOnce attempts a single connection
 func (t *TCPTransport) connectOnce(ctx context.Context) error {
+	debugf("TCP dialing %s", t.config.ServerAddr)
+
 	var conn net.Conn
 	var err error
 
@@ -201,8 +203,11 @@ func (t *TCPTransport) connectOnce(ctx context.Context) error {
 		conn, err = dialer.DialContext(ctx, "tcp", t.config.ServerAddr)
 	}
 	if err != nil {
+		debugf("TCP dial failed: %v", err)
 		return fmt.Errorf("transport: failed to dial server: %w", err)
 	}
+
+	debugf("TCP connected, starting handshake (sni=%s)", t.config.SNI)
 
 	// Create handshaker
 	handshaker, err := t.createHandshaker()
@@ -215,8 +220,11 @@ func (t *TCPTransport) connectOnce(ctx context.Context) error {
 	result, err := handshaker.Handshake(conn)
 	if err != nil {
 		_ = conn.Close()
+		debugf("TCP handshake failed: %v", err)
 		return fmt.Errorf("transport: handshake failed: %w", err)
 	}
+
+	debugf("TCP handshake succeeded")
 
 	// Create crypto engine
 	engine, err := NewCryptoEngine(result.Keys, true)
@@ -234,11 +242,14 @@ func (t *TCPTransport) connectOnce(ctx context.Context) error {
 	}
 	t.session = session
 
+	debugf("TCP session established")
 	return nil
 }
 
 // OpenStream opens a new stream to the target address
 func (t *TCPTransport) OpenStream(network, address string) (net.Conn, error) {
+	debugf("TCP opening stream: %s://%s", network, address)
+
 	// Ensure connected
 	ctx, cancel := context.WithTimeout(context.Background(), t.config.DialTimeout)
 	defer cancel()
@@ -254,6 +265,7 @@ func (t *TCPTransport) OpenStream(network, address string) (net.Conn, error) {
 	t.mu.RUnlock()
 
 	if session == nil || session.IsClosed() {
+		debugf("TCP session closed, reconnecting")
 		t.connected.Store(false)
 		// Try to reconnect
 		if err := t.Connect(ctx); err != nil {
@@ -273,6 +285,7 @@ func (t *TCPTransport) OpenStream(network, address string) (net.Conn, error) {
 
 	stream, err := session.OpenStream(addr)
 	if err != nil {
+		debugf("TCP open stream failed: %v", err)
 		t.failureCount.Add(1)
 		t.updateHealth(false, t.averageRTT())
 		return nil, err
@@ -280,6 +293,7 @@ func (t *TCPTransport) OpenStream(network, address string) (net.Conn, error) {
 
 	// Reset failure count on success
 	t.failureCount.Store(0)
+	debugf("TCP stream opened: %s://%s", network, address)
 	return stream, nil
 }
 

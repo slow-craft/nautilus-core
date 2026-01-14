@@ -308,11 +308,16 @@ func (t *UDPTransport) Connect(ctx context.Context) error {
 
 // connectOnce attempts a single connection
 func (t *UDPTransport) connectOnce(ctx context.Context) error {
+	debugf("UDP/KCP dialing %s", t.config.ServerAddr)
+
 	// Create KCP session (dial with FEC if configured)
 	kcpCfg := t.config.KCP
 	if kcpCfg == nil {
 		kcpCfg = DefaultKCPConfig()
 	}
+
+	debugf("UDP/KCP config: mode=%s, mtu=%d, snd_wnd=%d, rcv_wnd=%d, fec=%d/%d",
+		kcpCfg.Mode, kcpCfg.MTU, kcpCfg.SndWnd, kcpCfg.RcvWnd, kcpCfg.DataShard, kcpCfg.ParityShard)
 
 	var kcpSession *kcp.UDPSession
 	var err error
@@ -336,8 +341,11 @@ func (t *UDPTransport) connectOnce(ctx context.Context) error {
 	}
 
 	if err != nil {
+		debugf("UDP/KCP dial failed: %v", err)
 		return fmt.Errorf("transport: failed to dial KCP server: %w", err)
 	}
+
+	debugf("UDP/KCP connected, starting handshake (sni=%s)", t.config.SNI)
 
 	// Configure KCP session
 	t.configureKCPSession(kcpSession)
@@ -356,8 +364,11 @@ func (t *UDPTransport) connectOnce(ctx context.Context) error {
 	result, err := handshaker.Handshake(kcpSession)
 	if err != nil {
 		_ = kcpSession.Close()
+		debugf("UDP/KCP handshake failed: %v", err)
 		return fmt.Errorf("transport: handshake failed: %w", err)
 	}
+
+	debugf("UDP/KCP handshake succeeded")
 
 	// Clear deadline after handshake
 	_ = kcpSession.SetDeadline(time.Time{})
@@ -378,11 +389,14 @@ func (t *UDPTransport) connectOnce(ctx context.Context) error {
 	}
 	t.muxSession = muxSession
 
+	debugf("UDP/KCP session established")
 	return nil
 }
 
 // OpenStream opens a new stream to the target address
 func (t *UDPTransport) OpenStream(network, address string) (net.Conn, error) {
+	debugf("UDP opening stream: %s://%s", network, address)
+
 	// Ensure connected
 	ctx, cancel := context.WithTimeout(context.Background(), t.config.DialTimeout)
 	defer cancel()
@@ -398,6 +412,7 @@ func (t *UDPTransport) OpenStream(network, address string) (net.Conn, error) {
 	t.mu.RUnlock()
 
 	if session == nil || session.IsClosed() {
+		debugf("UDP session closed, reconnecting")
 		t.connected.Store(false)
 		// Try to reconnect
 		if err := t.Connect(ctx); err != nil {
@@ -417,6 +432,7 @@ func (t *UDPTransport) OpenStream(network, address string) (net.Conn, error) {
 
 	stream, err := session.OpenStream(addr)
 	if err != nil {
+		debugf("UDP open stream failed: %v", err)
 		t.failureCount.Add(1)
 		t.updateHealth(false, t.averageRTT())
 		return nil, err
@@ -424,6 +440,7 @@ func (t *UDPTransport) OpenStream(network, address string) (net.Conn, error) {
 
 	// Reset failure count on success
 	t.failureCount.Store(0)
+	debugf("UDP stream opened: %s://%s", network, address)
 	return stream, nil
 }
 
