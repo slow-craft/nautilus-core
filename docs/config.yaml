@@ -1097,35 +1097,48 @@ proxies: # socks5
     uuid: "<your uuid>"          # 必填，用户认证标识符
     udp: true                    # 可选，是否启用 UDP 代理支持
     sni: "www.cloudflare.com"    # 可选，SNI 伪装域名，默认 www.cloudflare.com
-    # handshake-timeout: 30      # 可选，握手超时时间（秒）
-    # idle-timeout: 60           # 可选，空闲超时时间（秒）
-    # dial-timeout: 30           # 可选，连接超时时间（秒）
-    # retry-times: 3             # 可选，重试次数
 
-    # UDP 传输层配置（启用 TCP/UDP 双栈模式）
-    # udp-transport:
-    #   enabled: true            # 启用 UDP 传输层（KCP）
-    #   dial-timeout: 5          # UDP 连接超时（秒），默认 5
-    #   handshake-timeout: 5     # UDP 握手超时（秒），默认 5
-    #   retry-times: 1           # UDP 重试次数，默认 1（快速故障转移）
+    # 传输层配置（以下均为默认值，一般无需修改）
+    # TCP 始终启用；UDP 启用时为双栈模式，禁用时为仅 TCP 模式
+    # 注意: TCP 和 UDP 共用 server 地址，不支持分离端口
+    # transport:
+    #   # TCP 传输配置（始终启用，不可关闭）
+    #   tcp:
+    #     dial-timeout: 30       # 连接服务器超时（秒），默认 30
+    #     handshake-timeout: 30  # 伪装握手超时（秒），默认 30
+    #     idle-timeout: 60       # 空闲连接超时（秒），默认 60
+    #     retry-times: 3         # 连接失败重试次数，默认 3
     #
-    #   # KCP 协议配置
-    #   kcp:
-    #     mode: fast             # KCP 模式：fast（低延迟）/normal（平衡）/default（带宽优先）
-    #     mtu: 1400              # 最大传输单元，默认 1400
-    #     snd-wnd: 1024          # 发送窗口大小，默认 1024
-    #     rcv-wnd: 1024          # 接收窗口大小，默认 1024
-    #     data-shard: 0          # FEC 数据分片数（0 禁用）
-    #     parity-shard: 0        # FEC 校验分片数（0 禁用）
+    #   # UDP 传输配置（基于 KCP 协议，适合高延迟/高丢包网络）
+    #   # 启用 UDP 后自动进入双栈模式，TCP 和 UDP 并行
+    #   udp:
+    #     enabled: true          # 是否启用，默认 true，设为 false 则仅使用 TCP
+    #     dial-timeout: 30       # 连接服务器超时（秒），默认 30
+    #     handshake-timeout: 30  # 伪装握手超时（秒），默认 30
+    #     idle-timeout: 60       # 空闲连接超时（秒），默认 60
+    #     retry-times: 3         # 连接失败重试次数，默认 3
+    #     kcp:
+    #       mode: fast           # KCP 模式：fast（低延迟）/normal（平衡）/default（带宽优先）
+    #       mtu: 1400            # 最大传输单元，默认 1400
+    #       snd-wnd: 1024        # 发送窗口大小，默认 1024
+    #       rcv-wnd: 1024        # 接收窗口大小，默认 1024
+    #       data-shard: 0        # FEC 数据分片数（0 禁用）
+    #       parity-shard: 0      # FEC 校验分片数（0 禁用）
     #
-    #   # 双栈策略配置
+    #   # smux 多路复用配置（TCP 和 UDP 共享）
+    #   mux:
+    #     max-streams: 1024      # 单连接最大并发流数，默认 1024
+    #     window-size: 262144    # 流控窗口大小（字节），默认 256KB
+    #     ping-interval: 30      # 心跳检测间隔（秒），默认 30
+    #
+    #   # 双栈策略配置（UDP 启用时生效）
     #   strategy:
-    #     primary: auto          # 首选协议：auto（自动选择）/tcp/udp
-    #     rtt-threshold: 500     # RTT 阈值（毫秒），超过则切换传输
-    #     failure-threshold: 3   # 连续失败次数阈值，超过则临时禁用
-    #     recovery-interval: 30  # 恢复间隔（秒），禁用后等待时间
-    #     warmup-both: true      # 启动时同时连接两种传输
-    #     health-check-interval: 30  # 健康检查间隔（秒）
+    #     primary: auto          # 通道选择：auto（RTT自动）/tcp（优先TCP）/udp（优先UDP）
+    #     rtt-threshold: 500     # RTT 差异超过此值时切换（毫秒），默认 500
+    #     failure-threshold: 3   # 连续失败次数阈值，默认 3
+    #     recovery-interval: 30  # 失败通道恢复等待时间（秒），默认 30
+    #     warmup-both: true      # 启动时预热双通道，默认 true
+    #     health-check-interval: 30  # 健康检查间隔（秒），默认 30
 
 # dns 出站会将请求劫持到内部 dns 模块，所有请求均在内部处理
   - name: "dns-out"

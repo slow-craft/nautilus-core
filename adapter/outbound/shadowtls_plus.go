@@ -31,35 +31,59 @@ type ShadowTLSPlusOption struct {
 	UDP    bool   `proxy:"udp,omitempty"`
 	SNI    string `proxy:"sni,omitempty"`
 
-	// Timeouts
-	HandshakeTimeout int `proxy:"handshake-timeout,omitempty"` // in seconds
-	IdleTimeout      int `proxy:"idle-timeout,omitempty"`      // in seconds
-	DialTimeout      int `proxy:"dial-timeout,omitempty"`      // in seconds
-	RetryTimes       int `proxy:"retry-times,omitempty"`
+	// Transport configuration (nested structure like original)
+	Transport *TransportOption `proxy:"transport,omitempty"`
+}
 
-	// UDP/KCP transport configuration (for dual-stack support)
-	UDPTransport *UDPTransportOption `proxy:"udp-transport,omitempty"`
+// TransportOption contains all transport layer configurations
+type TransportOption struct {
+	// TCP transport configuration (always enabled)
+	TCP *TCPTransportOption `proxy:"tcp,omitempty"`
+
+	// UDP transport configuration (KCP-based, for dual-stack mode)
+	UDP *UDPTransportOption `proxy:"udp,omitempty"`
+
+	// Mux configuration (shared by TCP and UDP)
+	Mux *MuxOption `proxy:"mux,omitempty"`
+
+	// Strategy configuration (for dual-stack mode)
+	Strategy *StrategyOption `proxy:"strategy,omitempty"`
+}
+
+// TCPTransportOption contains TCP transport configuration
+type TCPTransportOption struct {
+	// DialTimeout is the TCP dial timeout in seconds (default: 30)
+	DialTimeout int `proxy:"dial-timeout,omitempty"`
+
+	// HandshakeTimeout is the TCP handshake timeout in seconds (default: 30)
+	HandshakeTimeout int `proxy:"handshake-timeout,omitempty"`
+
+	// IdleTimeout is the TCP idle timeout in seconds (default: 60)
+	IdleTimeout int `proxy:"idle-timeout,omitempty"`
+
+	// RetryTimes is the number of TCP retry attempts (default: 3)
+	RetryTimes int `proxy:"retry-times,omitempty"`
 }
 
 // UDPTransportOption contains UDP transport configuration
 type UDPTransportOption struct {
-	// Enabled enables UDP transport for dual-stack mode
-	Enabled bool `proxy:"enabled,omitempty"`
+	// Enabled enables UDP transport for dual-stack mode (default: true)
+	Enabled *bool `proxy:"enabled,omitempty"`
 
-	// DialTimeout is the UDP dial timeout in seconds (default: 5)
+	// DialTimeout is the UDP dial timeout in seconds (default: 30)
 	DialTimeout int `proxy:"dial-timeout,omitempty"`
 
-	// HandshakeTimeout is the UDP handshake timeout in seconds (default: 5)
+	// HandshakeTimeout is the UDP handshake timeout in seconds (default: 30)
 	HandshakeTimeout int `proxy:"handshake-timeout,omitempty"`
 
-	// RetryTimes is the number of UDP retry attempts (default: 1)
+	// IdleTimeout is the UDP idle timeout in seconds (default: 60)
+	IdleTimeout int `proxy:"idle-timeout,omitempty"`
+
+	// RetryTimes is the number of UDP retry attempts (default: 3)
 	RetryTimes int `proxy:"retry-times,omitempty"`
 
 	// KCP contains KCP protocol configuration
 	KCP *KCPOption `proxy:"kcp,omitempty"`
-
-	// Strategy contains dual-stack strategy configuration
-	Strategy *StrategyOption `proxy:"strategy,omitempty"`
 }
 
 // KCPOption contains KCP protocol configuration
@@ -81,6 +105,18 @@ type KCPOption struct {
 
 	// ParityShard is the number of parity shards for FEC (0 to disable)
 	ParityShard int `proxy:"parity-shard,omitempty"`
+}
+
+// MuxOption contains smux multiplexing configuration
+type MuxOption struct {
+	// MaxStreams is the maximum number of concurrent streams (default: 1024)
+	MaxStreams int `proxy:"max-streams,omitempty"`
+
+	// WindowSize is the flow control window size in bytes (default: 262144)
+	WindowSize int `proxy:"window-size,omitempty"`
+
+	// PingInterval is the heartbeat interval in seconds (default: 30)
+	PingInterval int `proxy:"ping-interval,omitempty"`
 }
 
 // StrategyOption contains dual-stack strategy configuration
@@ -194,25 +230,9 @@ func (s *ShadowTLSPlus) createClient() (*stp.Client, error) {
 		config.SNI = s.option.SNI
 	}
 
-	if s.option.HandshakeTimeout > 0 {
-		config.HandshakeTimeout = time.Duration(s.option.HandshakeTimeout) * time.Second
-	}
-
-	if s.option.IdleTimeout > 0 {
-		config.IdleTimeout = time.Duration(s.option.IdleTimeout) * time.Second
-	}
-
-	if s.option.DialTimeout > 0 {
-		config.DialTimeout = time.Duration(s.option.DialTimeout) * time.Second
-	}
-
-	if s.option.RetryTimes > 0 {
-		config.RetryTimes = s.option.RetryTimes
-	}
-
-	// Configure UDP transport if enabled
-	if s.option.UDPTransport != nil && s.option.UDPTransport.Enabled {
-		config.UDP = s.buildUDPConfig(s.option.UDPTransport)
+	// Apply transport configuration
+	if s.option.Transport != nil {
+		s.applyTransportConfig(config, s.option.Transport)
 	}
 
 	// Use the adapter's dialer
@@ -221,8 +241,56 @@ func (s *ShadowTLSPlus) createClient() (*stp.Client, error) {
 	return stp.NewClient(config)
 }
 
+// applyTransportConfig applies transport configuration to client config
+func (s *ShadowTLSPlus) applyTransportConfig(config *stp.ClientConfig, transport *TransportOption) {
+	// Apply TCP configuration
+	if transport.TCP != nil {
+		if transport.TCP.HandshakeTimeout > 0 {
+			config.HandshakeTimeout = time.Duration(transport.TCP.HandshakeTimeout) * time.Second
+		}
+		if transport.TCP.IdleTimeout > 0 {
+			config.IdleTimeout = time.Duration(transport.TCP.IdleTimeout) * time.Second
+		}
+		if transport.TCP.DialTimeout > 0 {
+			config.DialTimeout = time.Duration(transport.TCP.DialTimeout) * time.Second
+		}
+		if transport.TCP.RetryTimes > 0 {
+			config.RetryTimes = transport.TCP.RetryTimes
+		}
+	}
+
+	// Apply mux configuration to session config
+	if transport.Mux != nil {
+		if config.SessionConfig == nil {
+			config.SessionConfig = stp.DefaultSessionConfig(true)
+		}
+		if transport.Mux.MaxStreams > 0 {
+			config.SessionConfig.MaxStreams = transport.Mux.MaxStreams
+		}
+		if transport.Mux.WindowSize > 0 {
+			config.SessionConfig.InitialWindowSize = transport.Mux.WindowSize
+		}
+		if transport.Mux.PingInterval > 0 {
+			config.SessionConfig.PingInterval = time.Duration(transport.Mux.PingInterval) * time.Second
+		}
+	}
+
+	// Apply UDP configuration if enabled
+	if transport.UDP != nil {
+		// UDP is enabled by default if udp section exists, unless explicitly disabled
+		enabled := true
+		if transport.UDP.Enabled != nil {
+			enabled = *transport.UDP.Enabled
+		}
+
+		if enabled {
+			config.UDP = s.buildUDPConfig(transport.UDP, transport.Strategy)
+		}
+	}
+}
+
 // buildUDPConfig builds UDP client configuration from options
-func (s *ShadowTLSPlus) buildUDPConfig(opt *UDPTransportOption) *stp.UDPClientConfig {
+func (s *ShadowTLSPlus) buildUDPConfig(opt *UDPTransportOption, strategy *StrategyOption) *stp.UDPClientConfig {
 	udpConfig := stp.DefaultUDPClientConfig()
 	udpConfig.Enabled = true
 
@@ -234,6 +302,10 @@ func (s *ShadowTLSPlus) buildUDPConfig(opt *UDPTransportOption) *stp.UDPClientCo
 		udpConfig.HandshakeTimeout = time.Duration(opt.HandshakeTimeout) * time.Second
 	}
 
+	if opt.IdleTimeout > 0 {
+		udpConfig.IdleTimeout = time.Duration(opt.IdleTimeout) * time.Second
+	}
+
 	if opt.RetryTimes > 0 {
 		udpConfig.RetryTimes = opt.RetryTimes
 	}
@@ -243,9 +315,9 @@ func (s *ShadowTLSPlus) buildUDPConfig(opt *UDPTransportOption) *stp.UDPClientCo
 		udpConfig.KCP = s.buildKCPConfig(opt.KCP)
 	}
 
-	// Configure strategy
-	if opt.Strategy != nil {
-		udpConfig.Strategy = s.buildStrategyConfig(opt.Strategy)
+	// Configure strategy (from transport level)
+	if strategy != nil {
+		udpConfig.Strategy = s.buildStrategyConfig(strategy)
 	}
 
 	return udpConfig

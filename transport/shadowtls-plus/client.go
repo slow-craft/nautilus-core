@@ -38,6 +38,9 @@ type UDPClientConfig struct {
 	// HandshakeTimeout is the UDP handshake timeout (default: 5s for fast failover)
 	HandshakeTimeout time.Duration
 
+	// IdleTimeout is the UDP idle timeout (default: uses TCP's idle timeout if not set)
+	IdleTimeout time.Duration
+
 	// RetryTimes is the number of UDP retry attempts (default: 1 for fast failover)
 	RetryTimes int
 
@@ -271,6 +274,12 @@ func (c *Client) connectDualStack(ctx context.Context) error {
 		udpCfg = DefaultUDPClientConfig()
 	}
 
+	// Use UDP-specific idle timeout if set, otherwise fall back to TCP's
+	udpIdleTimeout := udpCfg.IdleTimeout
+	if udpIdleTimeout <= 0 {
+		udpIdleTimeout = c.config.IdleTimeout
+	}
+
 	udpConfig := &UDPConfig{
 		TransportConfig: &TransportConfig{
 			ServerAddr:       c.config.ServerAddr,
@@ -279,7 +288,7 @@ func (c *Client) connectDualStack(ctx context.Context) error {
 			HandshakeTimeout: udpCfg.HandshakeTimeout,
 			DialTimeout:      udpCfg.DialTimeout,
 			RetryTimes:       udpCfg.RetryTimes,
-			IdleTimeout:      c.config.IdleTimeout,
+			IdleTimeout:      udpIdleTimeout,
 			PingInterval:     30 * time.Second,
 			// Note: UDP doesn't use the custom dialer since KCP handles its own connection
 		},
