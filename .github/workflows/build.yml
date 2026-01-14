@@ -87,33 +87,6 @@ jobs:
           - { goos: windows, goarch: amd64, goamd64: v2, output: amd64-v2-go124, goversion: '1.24' }
           - { goos: windows, goarch: amd64, goamd64: v3, output: amd64-v3-go124, goversion: '1.24' }
 
-          # Go 1.23 with special patch can work on Windows 7
-          # https://github.com/MetaCubeX/go/commits/release-branch.go1.23/
-          - { goos: windows, goarch: '386', output: '386-go123', goversion: '1.23' }
-          - { goos: windows, goarch: amd64, goamd64: v1, output: amd64-v1-go123, goversion: '1.23' }
-          - { goos: windows, goarch: amd64, goamd64: v2, output: amd64-v2-go123, goversion: '1.23' }
-          - { goos: windows, goarch: amd64, goamd64: v3, output: amd64-v3-go123, goversion: '1.23' }
-
-          # Go 1.22 with special patch can work on Windows 7
-          # https://github.com/MetaCubeX/go/commits/release-branch.go1.22/
-          - { goos: windows, goarch: '386', output: '386-go122', goversion: '1.22' }
-          - { goos: windows, goarch: amd64, goamd64: v1, output: amd64-v1-go122, goversion: '1.22' }
-          - { goos: windows, goarch: amd64, goamd64: v2, output: amd64-v2-go122, goversion: '1.22' }
-          - { goos: windows, goarch: amd64, goamd64: v3, output: amd64-v3-go122, goversion: '1.22' }
-
-          # Go 1.21 can revert commit `9e4385` to work on Windows 7
-          # https://github.com/golang/go/issues/64622#issuecomment-1847475161
-          # (OR we can just use golang1.21.4 which unneeded any patch)
-          - { goos: windows, goarch: '386', output: '386-go121', goversion: '1.21' }
-          - { goos: windows, goarch: amd64, goamd64: v1, output: amd64-v1-go121, goversion: '1.21' }
-          - { goos: windows, goarch: amd64, goamd64: v2, output: amd64-v2-go121, goversion: '1.21' }
-          - { goos: windows, goarch: amd64, goamd64: v3, output: amd64-v3-go121, goversion: '1.21' }
-
-          # Go 1.20 is the last release that will run on any release of Windows 7, 8, Server 2008 and Server 2012. Go 1.21 will require at least Windows 10 or Server 2016.
-          - { goos: windows, goarch: '386', output: '386-go120', goversion: '1.20' }
-          - { goos: windows, goarch: amd64, goamd64: v1, output: amd64-v1-go120, goversion: '1.20' }
-          - { goos: windows, goarch: amd64, goamd64: v2, output: amd64-v2-go120, goversion: '1.20' }
-          - { goos: windows, goarch: amd64, goamd64: v3, output: amd64-v3-go120, goversion: '1.20' }
 
           # Go 1.24 is the last release that will run on macOS 11 Big Sur. Go 1.25 will require macOS 12 Monterey or later.
           - { goos: darwin, goarch: arm64, output: arm64-go124, goversion: '1.24' }
@@ -121,29 +94,6 @@ jobs:
           - { goos: darwin, goarch: amd64, goamd64: v2, output: amd64-v2-go124, goversion: '1.24' }
           - { goos: darwin, goarch: amd64, goamd64: v3, output: amd64-v3-go124, goversion: '1.24' }
 
-          # Go 1.22 is the last release that will run on macOS 10.15 Catalina. Go 1.23 will require macOS 11 Big Sur or later.
-          - { goos: darwin, goarch: arm64, output: arm64-go122, goversion: '1.22' }
-          - { goos: darwin, goarch: amd64, goamd64: v1, output: amd64-v1-go122, goversion: '1.22' }
-          - { goos: darwin, goarch: amd64, goamd64: v2, output: amd64-v2-go122, goversion: '1.22' }
-          - { goos: darwin, goarch: amd64, goamd64: v3, output: amd64-v3-go122, goversion: '1.22' }
-
-          # Go 1.20 is the last release that will run on macOS 10.13 High Sierra or 10.14 Mojave. Go 1.21 will require macOS 10.15 Catalina or later.
-          - { goos: darwin, goarch: arm64, output: arm64-go120, goversion: '1.20' }
-          - { goos: darwin, goarch: amd64, goamd64: v1, output: amd64-v1-go120, goversion: '1.20' }
-          - { goos: darwin, goarch: amd64, goamd64: v2, output: amd64-v2-go120, goversion: '1.20' }
-          - { goos: darwin, goarch: amd64, goamd64: v3, output: amd64-v3-go120, goversion: '1.20' }
-
-          # Go 1.23 is the last release that requires Linux kernel version 2.6.32 or later. Go 1.24 will require Linux kernel version 3.2 or later.
-          - { goos: linux, goarch: '386', output: '386-go123', goversion: '1.23' }
-          - { goos: linux, goarch: amd64, goamd64: v1, output: amd64-v1-go123, goversion: '1.23', test: test }
-          - { goos: linux, goarch: amd64, goamd64: v2, output: amd64-v2-go123, goversion: '1.23' }
-          - { goos: linux, goarch: amd64, goamd64: v3, output: amd64-v3-go123, goversion: '1.23' }
-
-          # only for test
-          - { goos: linux, goarch: '386', output: '386-go120', goversion: '1.20' }
-          - { goos: linux, goarch: amd64, goamd64: v1, output: amd64-v1-go120, goversion: '1.20', test: test }
-          - { goos: linux, goarch: amd64, goamd64: v2, output: amd64-v2-go120, goversion: '1.20' }
-          - { goos: linux, goarch: amd64, goamd64: v3, output: amd64-v3-go120, goversion: '1.20' }
 
     steps:
     - uses: actions/checkout@v5
@@ -198,43 +148,6 @@ jobs:
       run: |
         cd $(go env GOROOT)
         patch --verbose -p 1 < $GITHUB_WORKSPACE/.github/patch/go1.24.patch
-
-      # modify from https://github.com/restic/restic/issues/4636#issuecomment-1896455557
-      # this patch file only works on golang1.23.x
-      # that means after golang1.24 release it must be changed
-      # see: https://github.com/MetaCubeX/go/commits/release-branch.go1.23/
-      # revert:
-      # 693def151adff1af707d82d28f55dba81ceb08e1: "crypto/rand,runtime: switch RtlGenRandom for ProcessPrng"
-      # 7c1157f9544922e96945196b47b95664b1e39108: "net: remove sysSocket fallback for Windows 7"
-      # 48042aa09c2f878c4faa576948b07fe625c4707a: "syscall: remove Windows 7 console handle workaround"
-      # a17d959debdb04cd550016a3501dd09d50cd62e7: "runtime: always use LoadLibraryEx to load system libraries"
-    - name: Revert Golang1.23 commit for Windows7/8
-      if: ${{ matrix.jobs.goos == 'windows' && matrix.jobs.goversion == '1.23' }}
-      run: |
-        cd $(go env GOROOT)
-        patch --verbose -p 1 < $GITHUB_WORKSPACE/.github/patch/go1.23.patch
-
-      # modify from https://github.com/restic/restic/issues/4636#issuecomment-1896455557
-      # this patch file only works on golang1.22.x
-      # that means after golang1.23 release it must be changed
-      # see: https://github.com/MetaCubeX/go/commits/release-branch.go1.22/
-      # revert:
-      # 693def151adff1af707d82d28f55dba81ceb08e1: "crypto/rand,runtime: switch RtlGenRandom for ProcessPrng"
-      # 7c1157f9544922e96945196b47b95664b1e39108: "net: remove sysSocket fallback for Windows 7"
-      # 48042aa09c2f878c4faa576948b07fe625c4707a: "syscall: remove Windows 7 console handle workaround"
-      # a17d959debdb04cd550016a3501dd09d50cd62e7: "runtime: always use LoadLibraryEx to load system libraries"
-    - name: Revert Golang1.22 commit for Windows7/8
-      if: ${{ matrix.jobs.goos == 'windows' && matrix.jobs.goversion == '1.22' }}
-      run: |
-        cd $(go env GOROOT)
-        patch --verbose -p 1 < $GITHUB_WORKSPACE/.github/patch/go1.22.patch
-
-      # modify from https://github.com/restic/restic/issues/4636#issuecomment-1896455557
-    - name: Revert Golang1.21 commit for Windows7/8
-      if: ${{ matrix.jobs.goos == 'windows' && matrix.jobs.goversion == '1.21' }}
-      run: |
-        cd $(go env GOROOT)
-        patch --verbose -p 1 < $GITHUB_WORKSPACE/.github/patch/go1.21.patch
 
     - name: Set variables
       run: |
