@@ -11,16 +11,16 @@ import (
 
 // mockTransport implements Transport interface for testing
 type mockTransport struct {
-	protocol       Protocol
-	connected      atomic.Bool
-	health         atomic.Pointer[HealthStatus]
-	connectErr     error
-	openStreamErr  error
-	closeErr       error
-	connectCalled  atomic.Int32
-	streamsCalled  atomic.Int32
-	closeCalled    atomic.Int32
-	connectDelay   time.Duration
+	protocol      Protocol
+	connected     atomic.Bool
+	health        atomic.Pointer[HealthStatus]
+	connectErr    error
+	openStreamErr error
+	closeErr      error
+	connectCalled atomic.Int32
+	streamsCalled atomic.Int32
+	closeCalled   atomic.Int32
+	connectDelay  time.Duration
 }
 
 func newMockTransport(proto Protocol) *mockTransport {

@@ -13,9 +13,9 @@ import (
 
 // TLS constants
 const (
-	RecordTypeHandshake     = 0x16
-	TLSVersion10            = 0x0301
-	TLSVersion12            = 0x0303
+	RecordTypeHandshake      = 0x16
+	TLSVersion10             = 0x0301
+	TLSVersion12             = 0x0303
 	HandshakeTypeClientHello = 0x01
 	HandshakeTypeServerHello = 0x02
 

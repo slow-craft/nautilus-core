@@ -108,9 +108,9 @@ func DefaultUDPConfig(serverAddr, uuid string) *UDPConfig {
 			ServerAddr:       serverAddr,
 			UUID:             uuid,
 			SNI:              "www.cloudflare.com",
-			HandshakeTimeout: 5 * time.Second,  // Short timeout for fast failover
-			DialTimeout:      5 * time.Second,  // Short timeout for fast failover
-			RetryTimes:       1,                // Single attempt for fast failover
+			HandshakeTimeout: 5 * time.Second, // Short timeout for fast failover
+			DialTimeout:      5 * time.Second, // Short timeout for fast failover
+			RetryTimes:       1,               // Single attempt for fast failover
 			IdleTimeout:      60 * time.Second,
 			PingInterval:     30 * time.Second,
 		},
