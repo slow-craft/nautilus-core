@@ -308,7 +308,7 @@ func (t *UDPTransport) Connect(ctx context.Context) error {
 
 // connectOnce attempts a single connection
 func (t *UDPTransport) connectOnce(ctx context.Context) error {
-	debugf("UDP/KCP dialing %s", t.config.ServerAddr)
+	infof("UDP/KCP dialing %s (sni=%s)", t.config.ServerAddr, t.config.SNI)
 
 	// Create KCP session (dial with FEC if configured)
 	kcpCfg := t.config.KCP
@@ -341,11 +341,11 @@ func (t *UDPTransport) connectOnce(ctx context.Context) error {
 	}
 
 	if err != nil {
-		debugf("UDP/KCP dial failed: %v", err)
+		warnf("UDP/KCP dial failed: %v", err)
 		return fmt.Errorf("transport: failed to dial KCP server: %w", err)
 	}
 
-	debugf("UDP/KCP connected, starting handshake (sni=%s)", t.config.SNI)
+	infof("UDP/KCP connected to %s, starting handshake (sni=%s)", t.config.ServerAddr, t.config.SNI)
 
 	// Configure KCP session
 	t.configureKCPSession(kcpSession)
@@ -364,11 +364,11 @@ func (t *UDPTransport) connectOnce(ctx context.Context) error {
 	result, err := handshaker.Handshake(kcpSession)
 	if err != nil {
 		_ = kcpSession.Close()
-		debugf("UDP/KCP handshake failed: %v", err)
+		warnf("UDP/KCP handshake failed: %v", err)
 		return fmt.Errorf("transport: handshake failed: %w", err)
 	}
 
-	debugf("UDP/KCP handshake succeeded")
+	infof("UDP/KCP handshake succeeded")
 
 	// Clear deadline after handshake
 	_ = kcpSession.SetDeadline(time.Time{})
@@ -389,7 +389,7 @@ func (t *UDPTransport) connectOnce(ctx context.Context) error {
 	}
 	t.muxSession = muxSession
 
-	debugf("UDP/KCP session established")
+	infof("UDP/KCP session established to %s", t.config.ServerAddr)
 	return nil
 }
 

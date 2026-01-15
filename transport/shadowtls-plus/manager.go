@@ -38,6 +38,10 @@ type TransportManager struct {
 	// Last known health status for change detection
 	lastTCPAvailable bool
 	lastUDPAvailable bool
+
+	// Reconnect rate limiting
+	lastReconnectAttempt atomic.Int64 // unix nano timestamp
+	reconnectCooldown    time.Duration
 }
 
 // ManagerConfig contains transport manager configuration
@@ -87,10 +91,11 @@ func NewTransportManager(tcp, udp Transport, config *ManagerConfig) (*TransportM
 	}
 
 	m := &TransportManager{
-		tcp:    tcp,
-		udp:    udp,
-		config: config,
-		stopCh: make(chan struct{}),
+		tcp:                 tcp,
+		udp:                 udp,
+		config:              config,
+		stopCh:              make(chan struct{}),
+		reconnectCooldown:   2 * time.Second, // Minimum interval between reconnect attempts
 	}
 
 	// Initialize health monitor
@@ -106,7 +111,7 @@ func NewTransportManager(tcp, udp Transport, config *ManagerConfig) (*TransportM
 
 // Start starts the transport manager and connects available transports
 func (m *TransportManager) Start(ctx context.Context) error {
-	debugf("manager starting, mode=%v, warmup-both=%v", m.config.SelectionMode, m.config.WarmupBoth)
+	debugf("manager starting, mode=%v, warmup-both=%v, has-udp=%v", m.config.SelectionMode, m.config.WarmupBoth, m.udp != nil)
 
 	var wg sync.WaitGroup
 	var tcpErr, udpErr error
@@ -119,7 +124,7 @@ func (m *TransportManager) Start(ctx context.Context) error {
 			debugf("TCP transport connecting...")
 			tcpErr = m.tcp.Connect(ctx)
 			if tcpErr != nil {
-				debugf("TCP transport connect failed: %v", tcpErr)
+				warnf("TCP transport connect failed: %v", tcpErr)
 			} else {
 				debugf("TCP transport connected")
 			}
@@ -133,11 +138,13 @@ func (m *TransportManager) Start(ctx context.Context) error {
 			debugf("UDP transport connecting...")
 			udpErr = m.udp.Connect(ctx)
 			if udpErr != nil {
-				debugf("UDP transport connect failed: %v", udpErr)
+				warnf("UDP transport connect failed: %v", udpErr)
 			} else {
 				debugf("UDP transport connected")
 			}
 		}()
+	} else {
+		debugf("UDP transport skipped: udp=%v, warmup-both=%v", m.udp != nil, m.config.WarmupBoth)
 	}
 
 	wg.Wait()
@@ -217,8 +224,16 @@ func (m *TransportManager) selectBestTransport() Transport {
 		tcpHealth != nil && tcpHealth.Available, m.healthMon.IsBlocked(ProtocolTCP),
 		udpHealth != nil && udpHealth.Available, m.healthMon.IsBlocked(ProtocolUDP))
 
-	// Neither available - try to connect
+	// Neither available - try to connect with rate limiting
 	if !tcpAvailable && !udpAvailable {
+		// Check reconnect cooldown to avoid flooding
+		lastAttempt := time.Unix(0, m.lastReconnectAttempt.Load())
+		if time.Since(lastAttempt) < m.reconnectCooldown {
+			debugf("no transport available, cooldown active (remaining: %v)", m.reconnectCooldown-time.Since(lastAttempt))
+			return nil
+		}
+		m.lastReconnectAttempt.Store(time.Now().UnixNano())
+
 		debugf("no transport available, trying to reconnect")
 		// Try to reconnect whichever is not blocked
 		if m.tcp != nil && !m.healthMon.IsBlocked(ProtocolTCP) {
