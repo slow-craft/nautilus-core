@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/netip"
 	"strconv"
 	"sync"
 	"time"
@@ -390,13 +391,17 @@ func (s *ShadowTLSPlus) buildStrategyConfig(opt *StrategyOption) *stp.StrategyCo
 	return strategyConfig
 }
 
-// stpDialerWrapper wraps C.Dialer to implement stp.ContextDialer
+// stpDialerWrapper wraps C.Dialer to implement stp.ContextDialer and stp.UDPDialer
 type stpDialerWrapper struct {
 	dialer C.Dialer
 }
 
 func (d *stpDialerWrapper) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
 	return d.dialer.DialContext(ctx, network, address)
+}
+
+func (d *stpDialerWrapper) ListenPacket(ctx context.Context, network, address string, rAddrPort netip.AddrPort) (net.PacketConn, error) {
+	return d.dialer.ListenPacket(ctx, network, address, rAddrPort)
 }
 
 // shadowTLSPlusPacketConn wraps a stream connection for UDP

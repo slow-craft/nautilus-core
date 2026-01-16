@@ -306,7 +306,11 @@ func (c *Client) connectDualStack(ctx context.Context) error {
 		},
 		KCP:           udpCfg.KCP,
 		SessionConfig: c.config.SessionConfig,
-		Dialer:        c.config.Dialer, // Pass dialer for TUN mode compatibility
+	}
+
+	// Pass dialer for TUN mode compatibility if it implements UDPDialer
+	if udpDialer, ok := c.config.Dialer.(UDPDialer); ok {
+		udpConfig.Dialer = udpDialer
 	}
 
 	udpTransport, err := NewUDPTransport(udpConfig)

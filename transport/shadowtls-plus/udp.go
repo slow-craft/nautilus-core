@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/netip"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -93,6 +94,7 @@ func (c *KCPConfig) applyMode() {
 // UDPDialer is an interface for UDP dialers that support context
 type UDPDialer interface {
 	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+	ListenPacket(ctx context.Context, network, address string, rAddrPort netip.AddrPort) (net.PacketConn, error)
 }
 
 // UDPConfig contains UDP transport configuration
@@ -326,14 +328,15 @@ func (t *UDPTransport) connectOnce(ctx context.Context) error {
 		kcpCfg = DefaultKCPConfig()
 	}
 
-	debugf("UDP/KCP config: mode=%s, mtu=%d, snd_wnd=%d, rcv_wnd=%d, fec=%d/%d",
-		kcpCfg.Mode, kcpCfg.MTU, kcpCfg.SndWnd, kcpCfg.RcvWnd, kcpCfg.DataShard, kcpCfg.ParityShard)
+	debugf("UDP/KCP config: mode=%s, mtu=%d, snd_wnd=%d, rcv_wnd=%d, fec=%d/%d, dialer=%v",
+		kcpCfg.Mode, kcpCfg.MTU, kcpCfg.SndWnd, kcpCfg.RcvWnd, kcpCfg.DataShard, kcpCfg.ParityShard, t.config.Dialer != nil)
 
 	var kcpSession *kcp.UDPSession
 	var err error
 
 	// Check if custom dialer is provided (for TUN mode compatibility)
 	if t.config.Dialer != nil {
+		debugf("UDP/KCP using custom dialer for TUN mode")
 		kcpSession, err = t.dialWithCustomDialer(ctx, kcpCfg)
 	} else if kcpCfg.DataShard > 0 && kcpCfg.ParityShard > 0 {
 		// With FEC (no custom dialer)
@@ -409,38 +412,36 @@ func (t *UDPTransport) connectOnce(ctx context.Context) error {
 // dialWithCustomDialer creates a KCP session using custom dialer
 // This enables proper routing mark and interface binding for TUN mode
 func (t *UDPTransport) dialWithCustomDialer(ctx context.Context, kcpCfg *KCPConfig) (*kcp.UDPSession, error) {
-	debugf("UDP/KCP using custom dialer for %s", t.config.ServerAddr)
-
-	// Use custom dialer to create UDP connection with proper routing
-	conn, err := t.config.Dialer.DialContext(ctx, "udp", t.config.ServerAddr)
-	if err != nil {
-		return nil, fmt.Errorf("custom dialer failed: %w", err)
-	}
-
-	// The dialer returns net.Conn, we need net.PacketConn for KCP
-	packetConn, ok := conn.(net.PacketConn)
-	if !ok {
-		_ = conn.Close()
-		return nil, fmt.Errorf("dialer returned non-PacketConn type: %T", conn)
-	}
-
-	// Resolve remote address
+	// Resolve remote address first
 	raddr, err := net.ResolveUDPAddr("udp", t.config.ServerAddr)
 	if err != nil {
-		_ = packetConn.Close()
 		return nil, fmt.Errorf("failed to resolve server address: %w", err)
+	}
+
+	// Convert to netip.AddrPort for ListenPacket
+	rAddrPort, err := netip.ParseAddrPort(raddr.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse server address: %w", err)
+	}
+
+	// Use ListenPacket to create an unconnected UDP socket
+	// This is required for KCP which needs ReadFrom/WriteTo semantics
+	// Connected UDP sockets (from DialContext) don't work properly with KCP
+	packetConn, err := t.config.Dialer.ListenPacket(ctx, "udp", "", rAddrPort)
+	if err != nil {
+		return nil, fmt.Errorf("custom dialer ListenPacket failed: %w", err)
 	}
 
 	// Create KCP session with custom PacketConn
 	// convid=0 lets KCP generate a random conversation ID
 	// ownConn=true means KCP will close the connection when session closes
 	kcpSession, err := kcp.NewConn4(
-		0,      // convid: 0 for random
-		raddr,  // remote address
-		nil,    // no block cipher (we use our own encryption)
+		0,     // convid: 0 for random
+		raddr, // remote address
+		nil,   // no block cipher (we use our own encryption)
 		kcpCfg.DataShard,
 		kcpCfg.ParityShard,
-		true,   // ownConn: KCP owns and will close the connection
+		true, // ownConn: KCP owns and will close the connection
 		packetConn,
 	)
 	if err != nil {
