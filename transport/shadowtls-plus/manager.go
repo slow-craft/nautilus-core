@@ -290,11 +290,13 @@ func (m *TransportManager) selectBestTransport() Transport {
 		// If one has significantly better RTT (>20% difference), prefer it
 		if tcpRTT > 0 && udpRTT > 0 {
 			if tcpRTT < udpRTT*8/10 { // TCP is 20%+ faster
-				debugf("selecting TCP (20%% faster RTT)")
+				pct := (udpRTT - tcpRTT) * 100 / udpRTT
+				debugf("selecting TCP (%d%% faster RTT)", pct)
 				return m.tcp
 			}
 			if udpRTT < tcpRTT*8/10 { // UDP is 20%+ faster
-				debugf("selecting UDP (20%% faster RTT)")
+				pct := (tcpRTT - udpRTT) * 100 / tcpRTT
+				debugf("selecting UDP (%d%% faster RTT)", pct)
 				return m.udp
 			}
 		}
