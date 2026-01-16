@@ -90,6 +90,11 @@ func (c *KCPConfig) applyMode() {
 	}
 }
 
+// UDPDialer is an interface for UDP dialers that support context
+type UDPDialer interface {
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
 // UDPConfig contains UDP transport configuration
 type UDPConfig struct {
 	*TransportConfig
@@ -99,6 +104,11 @@ type UDPConfig struct {
 
 	// SessionConfig for multiplexing
 	SessionConfig *SessionConfig
+
+	// Dialer is an optional custom dialer for UDP connections
+	// When set, this dialer will be used to create the underlying UDP connection
+	// which is then passed to KCP. This enables proper routing mark and interface binding.
+	Dialer UDPDialer
 }
 
 // DefaultUDPConfig returns default UDP configuration
@@ -322,8 +332,11 @@ func (t *UDPTransport) connectOnce(ctx context.Context) error {
 	var kcpSession *kcp.UDPSession
 	var err error
 
-	if kcpCfg.DataShard > 0 && kcpCfg.ParityShard > 0 {
-		// With FEC
+	// Check if custom dialer is provided (for TUN mode compatibility)
+	if t.config.Dialer != nil {
+		kcpSession, err = t.dialWithCustomDialer(ctx, kcpCfg)
+	} else if kcpCfg.DataShard > 0 && kcpCfg.ParityShard > 0 {
+		// With FEC (no custom dialer)
 		kcpSession, err = kcp.DialWithOptions(
 			t.config.ServerAddr,
 			nil, // no block cipher (we use our own encryption)
@@ -331,7 +344,7 @@ func (t *UDPTransport) connectOnce(ctx context.Context) error {
 			kcpCfg.ParityShard,
 		)
 	} else {
-		// Without FEC
+		// Without FEC (no custom dialer)
 		conn, dialErr := kcp.Dial(t.config.ServerAddr)
 		if dialErr != nil {
 			err = dialErr
@@ -391,6 +404,51 @@ func (t *UDPTransport) connectOnce(ctx context.Context) error {
 
 	infof("UDP/KCP session established to %s", t.config.ServerAddr)
 	return nil
+}
+
+// dialWithCustomDialer creates a KCP session using custom dialer
+// This enables proper routing mark and interface binding for TUN mode
+func (t *UDPTransport) dialWithCustomDialer(ctx context.Context, kcpCfg *KCPConfig) (*kcp.UDPSession, error) {
+	debugf("UDP/KCP using custom dialer for %s", t.config.ServerAddr)
+
+	// Use custom dialer to create UDP connection with proper routing
+	conn, err := t.config.Dialer.DialContext(ctx, "udp", t.config.ServerAddr)
+	if err != nil {
+		return nil, fmt.Errorf("custom dialer failed: %w", err)
+	}
+
+	// The dialer returns net.Conn, we need net.PacketConn for KCP
+	packetConn, ok := conn.(net.PacketConn)
+	if !ok {
+		_ = conn.Close()
+		return nil, fmt.Errorf("dialer returned non-PacketConn type: %T", conn)
+	}
+
+	// Resolve remote address
+	raddr, err := net.ResolveUDPAddr("udp", t.config.ServerAddr)
+	if err != nil {
+		_ = packetConn.Close()
+		return nil, fmt.Errorf("failed to resolve server address: %w", err)
+	}
+
+	// Create KCP session with custom PacketConn
+	// convid=0 lets KCP generate a random conversation ID
+	// ownConn=true means KCP will close the connection when session closes
+	kcpSession, err := kcp.NewConn4(
+		0,      // convid: 0 for random
+		raddr,  // remote address
+		nil,    // no block cipher (we use our own encryption)
+		kcpCfg.DataShard,
+		kcpCfg.ParityShard,
+		true,   // ownConn: KCP owns and will close the connection
+		packetConn,
+	)
+	if err != nil {
+		_ = packetConn.Close()
+		return nil, fmt.Errorf("failed to create KCP session: %w", err)
+	}
+
+	return kcpSession, nil
 }
 
 // OpenStream opens a new stream to the target address

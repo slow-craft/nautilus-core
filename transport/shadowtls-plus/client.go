@@ -303,10 +303,10 @@ func (c *Client) connectDualStack(ctx context.Context) error {
 			RetryTimes:       udpCfg.RetryTimes,
 			IdleTimeout:      udpIdleTimeout,
 			PingInterval:     30 * time.Second,
-			// Note: UDP doesn't use the custom dialer since KCP handles its own connection
 		},
 		KCP:           udpCfg.KCP,
 		SessionConfig: c.config.SessionConfig,
+		Dialer:        c.config.Dialer, // Pass dialer for TUN mode compatibility
 	}
 
 	udpTransport, err := NewUDPTransport(udpConfig)
