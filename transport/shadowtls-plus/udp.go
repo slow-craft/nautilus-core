@@ -496,8 +496,9 @@ func (t *UDPTransport) OpenStream(network, address string) (net.Conn, error) {
 		return nil, err
 	}
 
-	// Reset failure count on success
+	// Reset failure count and update health on success
 	t.failureCount.Store(0)
+	t.updateHealth(true, t.averageRTT())
 	debugf("UDP stream opened: %s://%s", network, address)
 	return stream, nil
 }

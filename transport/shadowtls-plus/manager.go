@@ -220,9 +220,14 @@ func (m *TransportManager) selectBestTransport() Transport {
 	tcpAvailable := tcpHealth != nil && tcpHealth.Available && !m.healthMon.IsBlocked(ProtocolTCP)
 	udpAvailable := udpHealth != nil && udpHealth.Available && !m.healthMon.IsBlocked(ProtocolUDP)
 
-	debugf("transport status: tcp(available=%v, blocked=%v), udp(available=%v, blocked=%v)",
-		tcpHealth != nil && tcpHealth.Available, m.healthMon.IsBlocked(ProtocolTCP),
-		udpHealth != nil && udpHealth.Available, m.healthMon.IsBlocked(ProtocolUDP))
+	// Only log when status changes
+	if tcpAvailable != m.lastTCPAvailable || udpAvailable != m.lastUDPAvailable {
+		infof("transport status changed: tcp(available=%v, blocked=%v), udp(available=%v, blocked=%v)",
+			tcpHealth != nil && tcpHealth.Available, m.healthMon.IsBlocked(ProtocolTCP),
+			udpHealth != nil && udpHealth.Available, m.healthMon.IsBlocked(ProtocolUDP))
+		m.lastTCPAvailable = tcpAvailable
+		m.lastUDPAvailable = udpAvailable
+	}
 
 	// Neither available - try to connect with rate limiting
 	if !tcpAvailable && !udpAvailable {
