@@ -1,18 +1,26 @@
-# Multi-Protocol Proxy Node Design
+# Multi-Protocol Proxy Node Implementation Plan
 
-## Overview
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-New proxy type `multi-protocol` that bundles multiple protocol channels into a single logical node. Unlike proxy groups (fallback/url-test), this is a `ProxyAdapter` — it participates in proxy groups as a single node, not a nested group.
+**Goal:** New proxy type `multi-protocol` that bundles multiple protocol channels into a single logical node with priority-based failover and shadow dial recovery.
 
-## Motivation
+**Architecture:** Implements `ProxyAdapter` interface (not a proxy group). Internal protocol list ordered by priority. Dial failure triggers inline fallback to next protocol. Recovery uses traffic-driven shadow dials instead of timers.
 
-Users have multiple servers in the same region running different protocols (e.g., Host A: trojan + vmess, Host B: hysteria2 + tuic). Current approach requires configuring them as separate nodes and using fallback groups, which:
+**Tech Stack:** Go, atomic operations for lock-free state, existing `ParseProxy` for protocol parsing.
+
+---
+
+## Design
+
+### Motivation
+
+Users have multiple servers in the same region running different protocols (e.g., Host A: trojan + vmess, Host B: hysteria2 + tuic). Current approach requires separate nodes + fallback group, which:
 
 - Exposes implementation details (multiple nodes for one logical location)
 - Relies on periodic URL testing for failure detection (slow)
 - Doesn't provide real connection-failure-driven switching
 
-## Configuration
+### Configuration
 
 ```yaml
 proxies:
@@ -38,14 +46,14 @@ proxies:
         port: 8080
         uuid: "xxx"
 
-    # Optional settings
+    # Optional (all have defaults)
     max-failures: 3        # Consecutive failures to mark unavailable (default: 3)
     dial-timeout: 5        # Per-protocol dial timeout in seconds (default: 5)
     probe-rate: 0.1        # Shadow dial probability when degraded (default: 10%)
     min-probe-rate: 0.02   # Minimum probe rate after repeated failures (default: 2%)
 ```
 
-All existing protocol types are supported in the `protocols` list. Each protocol entry uses the same configuration format as a standalone proxy of that type (minus `name`).
+All existing protocol types are supported. Each protocol entry uses the same config format as a standalone proxy of that type (minus `name`).
 
 Usage in proxy groups — it's just a regular node:
 
@@ -56,84 +64,99 @@ proxy-groups:
     proxies: ["Hong Kong", "Japan", "US"]
 ```
 
-## Architecture
-
-### Core Struct
+### Core Structs
 
 ```go
 // adapter/outbound/multi_protocol.go
 
+type MultiProtocolOption struct {
+    BasicOption
+    Name         string           `proxy:"name"`
+    Protocols    []map[string]any `proxy:"protocols"`
+    MaxFailures  int              `proxy:"max-failures,omitempty"`  // default: 3
+    DialTimeout  int              `proxy:"dial-timeout,omitempty"`  // default: 5 (seconds)
+    ProbeRate    float64          `proxy:"probe-rate,omitempty"`    // default: 0.1
+    MinProbeRate float64          `proxy:"min-probe-rate,omitempty"` // default: 0.02
+}
+
 type MultiProtocol struct {
     *Base
-    protocols    []*protocolState  // ordered by priority (index 0 = highest)
-    activeIndex  atomic.Int32      // index of current active protocol
-    maxFailures  int
+    protocols    []*protocolState
+    activeIndex  atomic.Int32
+    maxFailures  int32
     dialTimeout  time.Duration
     probeRate    float64
     minProbeRate float64
-    mu           sync.RWMutex
 }
 
 type protocolState struct {
-    proxy          C.ProxyAdapter  // actual proxy instance (trojan, vmess, etc.)
-    alive          atomic.Bool     // whether this protocol is available
-    failCount      atomic.Int32    // consecutive dial failure count
-    shadowFails    atomic.Int32    // consecutive shadow dial failures (for adaptive rate)
+    proxy       C.ProxyAdapter
+    alive       atomic.Bool
+    failCount   atomic.Int32
+    shadowFails atomic.Int32
+    probing     atomic.Bool  // guard against concurrent shadow dials
 }
 ```
 
-### Dial Flow
+### Dial Flow (TCP & UDP)
 
 ```
-DialContext(ctx, metadata):
-  1. active = protocols[activeIndex]
-  2. conn, err = active.proxy.DialContext(ctx, metadata)
-  3. if err == nil:
-       active.failCount.Store(0)
-       triggerShadowDial(metadata)   // if degraded
-       return conn, nil
-  4. if err != nil:
-       active.failCount.Add(1)
-       if active.failCount >= maxFailures:
-           active.alive.Store(false)
-           advanceToNextAlive()
-       // retry with next available protocol (same request)
-       goto step 1 with next protocol
-  5. all protocols failed: return nil, error
+DialContext(ctx, metadata) / ListenPacketContext(ctx, metadata):
+  1. startIdx = activeIndex.Load()
+  2. for i = startIdx; i < len(protocols); i++:
+       if !protocols[i].alive.Load():
+           continue
+       dialCtx = context.WithTimeout(ctx, dialTimeout)
+       conn, err = protocols[i].proxy.DialContext(dialCtx, metadata)
+       if err == nil:
+           protocols[i].failCount.Store(0)
+           if i > 0:  // degraded — trigger shadow dial
+               triggerShadowDial(metadata)
+           return conn, nil
+       else:
+           newFails = protocols[i].failCount.Add(1)
+           if newFails >= maxFailures:
+               protocols[i].alive.Store(false)
+               updateActiveIndex()
+           // continue to next protocol
+  3. // all protocols failed — reset all to alive for next attempt
+     resetAll()
+     return nil, lastError
 ```
-
-Same logic applies to `ListenPacketContext` for UDP.
 
 ### Shadow Dial (Recovery Probing)
 
-Triggered **only when degraded** (active protocol is not the highest priority):
+Triggered **only when degraded** (active protocol is not the highest priority). Driven by actual traffic, not timers.
 
 ```
 triggerShadowDial(metadata):
-  if activeIndex == 0:
-      return  // already on highest priority, no probing needed
+  activeIdx = activeIndex.Load()
+  if activeIdx == 0:
+      return  // already on highest priority
 
-  for i := 0; i < activeIndex; i++:
-      if protocols[i].alive:
+  for i = 0; i < activeIdx; i++:
+      if protocols[i].alive.Load():
           continue  // already recovered
-
+      if protocols[i].probing.Load():
+          continue  // already probing
       rate = adaptiveRate(protocols[i])
       if rand.Float64() > rate:
           continue  // skip this time
 
-      go func():
-          ctx, cancel = context.WithTimeout(5s)
-          conn, err = protocols[i].proxy.DialContext(ctx, metadata)
+      protocols[i].probing.Store(true)
+      go func(idx int):
+          defer protocols[idx].probing.Store(false)
+          ctx = context.WithTimeout(context.Background(), dialTimeout)
+          conn, err = protocols[idx].proxy.DialContext(ctx, probeMetadata)
           if err == nil:
               conn.Close()
-              protocols[i].alive.Store(true)
-              protocols[i].failCount.Store(0)
-              protocols[i].shadowFails.Store(0)
-              // activeIndex will naturally move up on next DialContext
+              protocols[idx].alive.Store(true)
+              protocols[idx].failCount.Store(0)
+              protocols[idx].shadowFails.Store(0)
               updateActiveIndex()
           else:
-              protocols[i].shadowFails.Add(1)
-      ()
+              protocols[idx].shadowFails.Add(1)
+      (i)
 ```
 
 **Adaptive probe rate:**
@@ -141,10 +164,10 @@ triggerShadowDial(metadata):
 ```
 adaptiveRate(state):
     fails = state.shadowFails.Load()
-    rate = probeRate * (0.5 ^ fails)   // halve rate each failure
+    rate = probeRate * (0.5 ^ fails)   // halve rate each shadow failure
     return max(rate, minProbeRate)
 
-Example with defaults (probeRate=0.1, minProbeRate=0.02):
+Example (probeRate=0.1, minProbeRate=0.02):
   0 shadow fails → 10%
   1 shadow fail  → 5%
   2 shadow fails → 2.5%
@@ -154,20 +177,20 @@ Example with defaults (probeRate=0.1, minProbeRate=0.02):
 ### State Machine
 
 ```
-Protocol States: Active / Unavailable
+Protocol States: Alive / Unavailable
 
 Node State:
-  ┌─ Normal: activeIndex == 0 (highest priority protocol)
+  ┌─ Normal: activeIndex == 0 (highest priority)
   │   → Dial success: stay
-  │   → Dial fails max-failures times: mark unavailable, degrade
+  │   → Dial fails max-failures times: mark unavailable, degrade to next
   │
   └─ Degraded: activeIndex > 0
       → Main path: dial current active protocol (no blocking)
       → Shadow dial: probabilistically probe higher priority protocols
-        → Shadow success: mark recovered, updateActiveIndex()
-        → Shadow failure: reduce probe rate, silent
+        → Success: mark recovered, updateActiveIndex()
+        → Failure: reduce probe rate, silent
       → Current protocol also fails: degrade further
-      → All protocols unavailable: return error
+      → All protocols fail: reset all, return error
 ```
 
 ### Active Index Management
@@ -180,60 +203,707 @@ func (m *MultiProtocol) updateActiveIndex() {
             return
         }
     }
-    // all dead — reset to 0 so next dial attempts from highest priority
+    m.activeIndex.Store(0)
+}
+
+func (m *MultiProtocol) resetAll() {
+    for _, p := range m.protocols {
+        p.alive.Store(true)
+        p.failCount.Store(0)
+    }
     m.activeIndex.Store(0)
 }
 ```
 
-### Connection Handling
-
-- **New connections only**: switching affects new dials; existing connections are untouched
-- **Existing connections**: naturally expire or break, then reconnect through current active protocol
-- **UDP**: same logic via `ListenPacketContext`, QUIC handshake failure = protocol unavailable
-
-### ProxyAdapter Interface
-
-`MultiProtocol` implements `C.ProxyAdapter`:
+### ProxyAdapter Interface Implementation
 
 | Method | Behavior |
 |--------|----------|
-| `Name()` | Returns the multi-protocol node name |
-| `Type()` | New type constant `C.MultiProtocol` |
-| `Addr()` | Returns active protocol's addr |
+| `Name()` | Via embedded `*Base` — returns node name |
+| `Type()` | Via embedded `*Base` — returns `C.MultiProtocol` |
+| `Addr()` | Returns active protocol's `Addr()` |
 | `SupportUDP()` | `true` if any protocol supports UDP |
+| `SupportUOT()` | `true` if active protocol supports UOT |
+| `IsL3Protocol()` | Delegates to active protocol |
 | `DialContext()` | Priority-based dial with inline fallback |
-| `ListenPacketContext()` | Same as DialContext for UDP |
-| `Unwrap()` | Returns current active protocol's proxy |
-| `Close()` | Closes all protocol instances and stops probing |
+| `ListenPacketContext()` | Same logic as DialContext for UDP |
+| `Unwrap()` | Returns nil (opaque node, not a group) |
+| `MarshalJSON()` | Include active protocol name + all protocol states |
+| `Close()` | Close all protocol instances |
 
 ### Config Parsing
 
 In `adapter/parser.go`, add case `"multi-protocol"`:
 
-1. Parse the `protocols` array
-2. For each protocol entry, reuse existing parser logic (`ParseProxy()`) to create proxy instances
-3. Wrap them in `protocolState`
-4. Create `MultiProtocol` instance
+```go
+case "multi-protocol":
+    mpOption := &outbound.MultiProtocolOption{BasicOption: basicOption}
+    err = decoder.Decode(mapping, mpOption)
+    if err != nil {
+        break
+    }
+    proxy, err = outbound.NewMultiProtocol(*mpOption)
+```
 
-### API / Manual Control
+Inside `NewMultiProtocol`, parse each protocol entry by calling a new internal
+`parseProtocolProxy(mapping map[string]any, basicOption BasicOption) (ProxyAdapter, error)`
+that reuses the same switch/decode logic as `ParseProxy` but returns `ProxyAdapter`
+instead of `C.Proxy` (avoids the autoclose/wrapper layers for internal sub-proxies).
 
-Expose via existing RESTful API:
+### Connection Handling
 
-- `GET /proxies/Hong Kong` — shows current active protocol, all protocol states
-- `PUT /proxies/Hong Kong` — force reset all protocols to alive (manual recovery trigger)
+- **New connections only**: switching affects new dials; existing connections untouched
+- **Existing connections**: naturally expire/break, then reconnect through current active
+- **UDP**: same logic via `ListenPacketContext`; QUIC handshake failure = protocol unavailable
 
-## Files to Create/Modify
+### Edge Cases
 
-| File | Action |
-|------|--------|
-| `adapter/outbound/multi_protocol.go` | **Create** — core implementation |
-| `constant/adapters.go` | **Modify** — add `MultiProtocol` adapter type |
-| `adapter/parser.go` | **Modify** — add parsing case |
-| `docs/config.yaml` | **Modify** — add config example |
-
-## Edge Cases
-
-- **All protocols unavailable**: return error, reset activeIndex to 0 so next attempt tries from top
-- **Only one protocol configured**: behaves exactly like a regular proxy, no overhead
+- **All protocols unavailable**: reset all to alive, return error; next request retries from top
+- **Only one protocol**: behaves exactly like a regular proxy, zero overhead
 - **Context deadline**: if upstream context expires mid-retry, stop trying remaining protocols
-- **Concurrent shadow dials**: use `sync.Once`-style guard to prevent multiple shadow dials for the same protocol simultaneously
+- **Concurrent shadow dials**: `probing` atomic bool prevents duplicate shadow dials per protocol
+
+---
+
+## Implementation Tasks
+
+### Task 1: Add MultiProtocol adapter type constant
+
+**Files:**
+- Modify: `constant/adapters.go`
+
+**Step 1: Add constant**
+
+In the adapter type `iota` block, after `TrustTunnel`, add:
+
+```go
+	TrustTunnel
+	MultiProtocol
+```
+
+**Step 2: Add String() case**
+
+In the `String()` method, before `case Relay:`, add:
+
+```go
+	case MultiProtocol:
+		return "MultiProtocol"
+```
+
+**Step 3: Verify it compiles**
+
+Run: `go build ./constant/...`
+Expected: success
+
+**Step 4: Commit**
+
+```bash
+git add constant/adapters.go
+git commit -m "feat(multi-protocol): add MultiProtocol adapter type constant"
+```
+
+---
+
+### Task 2: Implement core MultiProtocol outbound
+
+**Files:**
+- Create: `adapter/outbound/multi_protocol.go`
+
+**Step 1: Create the file with full implementation**
+
+```go
+package outbound
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"math"
+	"math/rand/v2"
+	"sync/atomic"
+	"time"
+
+	"github.com/metacubex/mihomo/common/structure"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/log"
+)
+
+const (
+	defaultMaxFailures  = 3
+	defaultDialTimeout  = 5
+	defaultProbeRate    = 0.1
+	defaultMinProbeRate = 0.02
+)
+
+type MultiProtocolOption struct {
+	BasicOption
+	Name         string           `proxy:"name"`
+	Protocols    []map[string]any `proxy:"protocols"`
+	MaxFailures  int              `proxy:"max-failures,omitempty"`
+	DialTimeout  int              `proxy:"dial-timeout,omitempty"`
+	ProbeRate    float64          `proxy:"probe-rate,omitempty"`
+	MinProbeRate float64          `proxy:"min-probe-rate,omitempty"`
+}
+
+type protocolState struct {
+	proxy       ProxyAdapter
+	alive       atomic.Bool
+	failCount   atomic.Int32
+	shadowFails atomic.Int32
+	probing     atomic.Bool
+}
+
+type MultiProtocol struct {
+	*Base
+	protocols    []*protocolState
+	activeIndex  atomic.Int32
+	maxFailures  int32
+	dialTimeout  time.Duration
+	probeRate    float64
+	minProbeRate float64
+}
+
+func NewMultiProtocol(option MultiProtocolOption) (*MultiProtocol, error) {
+	if len(option.Protocols) == 0 {
+		return nil, fmt.Errorf("multi-protocol: at least one protocol required")
+	}
+
+	maxFailures := option.MaxFailures
+	if maxFailures <= 0 {
+		maxFailures = defaultMaxFailures
+	}
+	dialTimeout := option.DialTimeout
+	if dialTimeout <= 0 {
+		dialTimeout = defaultDialTimeout
+	}
+	probeRate := option.ProbeRate
+	if probeRate <= 0 {
+		probeRate = defaultProbeRate
+	}
+	minProbeRate := option.MinProbeRate
+	if minProbeRate <= 0 {
+		minProbeRate = defaultMinProbeRate
+	}
+
+	decoder := structure.NewDecoder(structure.Option{
+		TagName: "proxy", WeaklyTypedInput: true,
+		KeyReplacer: structure.DefaultKeyReplacer,
+	})
+
+	protocols := make([]*protocolState, 0, len(option.Protocols))
+	hasUDP := false
+
+	for i, protoMap := range option.Protocols {
+		proxy, err := parseProtocolProxy(decoder, protoMap, option.BasicOption)
+		if err != nil {
+			return nil, fmt.Errorf("multi-protocol: protocol[%d]: %w", i, err)
+		}
+		state := &protocolState{proxy: proxy}
+		state.alive.Store(true)
+		protocols = append(protocols, state)
+		if proxy.SupportUDP() {
+			hasUDP = true
+		}
+	}
+
+	mp := &MultiProtocol{
+		Base: NewBase(BaseOption{
+			Name:        option.Name,
+			Addr:        protocols[0].proxy.Addr(),
+			Type:        C.MultiProtocol,
+			UDP:         hasUDP,
+			Interface:   option.Interface,
+			RoutingMark: option.RoutingMark,
+			Prefer:      option.IPVersion,
+		}),
+		protocols:    protocols,
+		maxFailures:  int32(maxFailures),
+		dialTimeout:  time.Duration(dialTimeout) * time.Second,
+		probeRate:    probeRate,
+		minProbeRate: minProbeRate,
+	}
+	return mp, nil
+}
+
+func (m *MultiProtocol) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+	var lastErr error
+	startIdx := int(m.activeIndex.Load())
+
+	for i := startIdx; i < len(m.protocols); i++ {
+		p := m.protocols[i]
+		if !p.alive.Load() {
+			continue
+		}
+
+		dialCtx, cancel := context.WithTimeout(ctx, m.dialTimeout)
+		conn, err := p.proxy.DialContext(dialCtx, metadata)
+		cancel()
+
+		if err == nil {
+			p.failCount.Store(0)
+			if i > 0 {
+				m.triggerShadowDial(metadata, false)
+			}
+			return conn, nil
+		}
+
+		lastErr = err
+		newFails := p.failCount.Add(1)
+		if newFails >= m.maxFailures {
+			p.alive.Store(false)
+			log.Warnln("[MultiProtocol] %s: protocol %s marked unavailable after %d failures",
+				m.Name(), p.proxy.Name(), newFails)
+			m.updateActiveIndex()
+		}
+
+		if ctx.Err() != nil {
+			break
+		}
+	}
+
+	if lastErr == nil {
+		lastErr = fmt.Errorf("multi-protocol %s: all protocols unavailable", m.Name())
+	}
+	m.resetAllIfAllDead()
+	return nil, lastErr
+}
+
+func (m *MultiProtocol) ListenPacketContext(ctx context.Context, metadata *C.Metadata) (C.PacketConn, error) {
+	var lastErr error
+	startIdx := int(m.activeIndex.Load())
+
+	for i := startIdx; i < len(m.protocols); i++ {
+		p := m.protocols[i]
+		if !p.alive.Load() || !p.proxy.SupportUDP() {
+			continue
+		}
+
+		dialCtx, cancel := context.WithTimeout(ctx, m.dialTimeout)
+		pc, err := p.proxy.ListenPacketContext(dialCtx, metadata)
+		cancel()
+
+		if err == nil {
+			p.failCount.Store(0)
+			if i > 0 {
+				m.triggerShadowDial(metadata, true)
+			}
+			return pc, nil
+		}
+
+		lastErr = err
+		newFails := p.failCount.Add(1)
+		if newFails >= m.maxFailures {
+			p.alive.Store(false)
+			log.Warnln("[MultiProtocol] %s: protocol %s marked unavailable after %d failures",
+				m.Name(), p.proxy.Name(), newFails)
+			m.updateActiveIndex()
+		}
+
+		if ctx.Err() != nil {
+			break
+		}
+	}
+
+	if lastErr == nil {
+		lastErr = fmt.Errorf("multi-protocol %s: no UDP-capable protocol available", m.Name())
+	}
+	m.resetAllIfAllDead()
+	return nil, lastErr
+}
+
+func (m *MultiProtocol) Addr() string {
+	idx := m.activeIndex.Load()
+	if int(idx) < len(m.protocols) {
+		return m.protocols[idx].proxy.Addr()
+	}
+	return m.protocols[0].proxy.Addr()
+}
+
+func (m *MultiProtocol) SupportUOT() bool {
+	idx := m.activeIndex.Load()
+	if int(idx) < len(m.protocols) {
+		return m.protocols[idx].proxy.SupportUOT()
+	}
+	return false
+}
+
+func (m *MultiProtocol) IsL3Protocol(metadata *C.Metadata) bool {
+	idx := m.activeIndex.Load()
+	if int(idx) < len(m.protocols) {
+		return m.protocols[idx].proxy.IsL3Protocol(metadata)
+	}
+	return false
+}
+
+func (m *MultiProtocol) MarshalJSON() ([]byte, error) {
+	activeIdx := m.activeIndex.Load()
+	protoStates := make([]map[string]any, 0, len(m.protocols))
+	for i, p := range m.protocols {
+		protoStates = append(protoStates, map[string]any{
+			"type":        p.proxy.Type().String(),
+			"addr":        p.proxy.Addr(),
+			"alive":       p.alive.Load(),
+			"fail_count":  p.failCount.Load(),
+			"active":      int32(i) == activeIdx,
+		})
+	}
+	return json.Marshal(map[string]any{
+		"type":            m.Type().String(),
+		"id":              m.Id(),
+		"active_protocol": m.protocols[activeIdx].proxy.Type().String(),
+		"protocols":       protoStates,
+	})
+}
+
+func (m *MultiProtocol) Close() error {
+	for _, p := range m.protocols {
+		_ = p.proxy.Close()
+	}
+	return nil
+}
+
+// --- internal ---
+
+func (m *MultiProtocol) updateActiveIndex() {
+	for i, p := range m.protocols {
+		if p.alive.Load() {
+			m.activeIndex.Store(int32(i))
+			return
+		}
+	}
+	m.activeIndex.Store(0)
+}
+
+func (m *MultiProtocol) resetAllIfAllDead() {
+	for _, p := range m.protocols {
+		if p.alive.Load() {
+			return
+		}
+	}
+	log.Warnln("[MultiProtocol] %s: all protocols dead, resetting", m.Name())
+	for _, p := range m.protocols {
+		p.alive.Store(true)
+		p.failCount.Store(0)
+	}
+	m.activeIndex.Store(0)
+}
+
+func (m *MultiProtocol) triggerShadowDial(metadata *C.Metadata, udp bool) {
+	activeIdx := int(m.activeIndex.Load())
+	if activeIdx == 0 {
+		return
+	}
+
+	for i := 0; i < activeIdx; i++ {
+		p := m.protocols[i]
+		if p.alive.Load() || p.probing.Load() {
+			continue
+		}
+		if udp && !p.proxy.SupportUDP() {
+			continue
+		}
+
+		rate := m.adaptiveRate(p)
+		if rand.Float64() > rate {
+			continue
+		}
+
+		if !p.probing.CompareAndSwap(false, true) {
+			continue
+		}
+
+		go func(idx int, ps *protocolState) {
+			defer ps.probing.Store(false)
+
+			ctx, cancel := context.WithTimeout(context.Background(), m.dialTimeout)
+			defer cancel()
+
+			var err error
+			if udp {
+				pc, e := ps.proxy.ListenPacketContext(ctx, metadata)
+				if e == nil {
+					_ = pc.Close()
+				}
+				err = e
+			} else {
+				conn, e := ps.proxy.DialContext(ctx, metadata)
+				if e == nil {
+					_ = conn.Close()
+				}
+				err = e
+			}
+
+			if err == nil {
+				ps.alive.Store(true)
+				ps.failCount.Store(0)
+				ps.shadowFails.Store(0)
+				m.updateActiveIndex()
+				log.Infoln("[MultiProtocol] %s: protocol %s recovered via shadow dial",
+					m.Name(), ps.proxy.Name())
+			} else {
+				ps.shadowFails.Add(1)
+			}
+		}(i, p)
+	}
+}
+
+func (m *MultiProtocol) adaptiveRate(p *protocolState) float64 {
+	fails := float64(p.shadowFails.Load())
+	rate := m.probeRate * math.Pow(0.5, fails)
+	if rate < m.minProbeRate {
+		return m.minProbeRate
+	}
+	return rate
+}
+
+// parseProtocolProxy creates a ProxyAdapter from a protocol config map.
+// Reuses the same decode logic as ParseProxy but returns the raw ProxyAdapter.
+func parseProtocolProxy(decoder *structure.Decoder, mapping map[string]any, basicOption BasicOption) (ProxyAdapter, error) {
+	proxyType, ok := mapping["type"].(string)
+	if !ok {
+		return nil, fmt.Errorf("missing type")
+	}
+
+	var (
+		proxy ProxyAdapter
+		err   error
+	)
+
+	switch proxyType {
+	case "ss":
+		opt := &ShadowSocksOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewShadowSocks(*opt)
+		}
+	case "ssr":
+		opt := &ShadowSocksROption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewShadowSocksR(*opt)
+		}
+	case "socks5":
+		opt := &Socks5Option{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewSocks5(*opt)
+		}
+	case "http":
+		opt := &HttpOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewHttp(*opt)
+		}
+	case "vmess":
+		opt := &VmessOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewVmess(*opt)
+		}
+	case "vless":
+		opt := &VlessOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewVless(*opt)
+		}
+	case "snell":
+		opt := &SnellOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewSnell(*opt)
+		}
+	case "trojan":
+		opt := &TrojanOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewTrojan(*opt)
+		}
+	case "hysteria":
+		opt := &HysteriaOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewHysteria(*opt)
+		}
+	case "hysteria2":
+		opt := &Hysteria2Option{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewHysteria2(*opt)
+		}
+	case "wireguard":
+		opt := &WireGuardOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewWireGuard(*opt)
+		}
+	case "tuic":
+		opt := &TuicOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewTuic(*opt)
+		}
+	case "ssh":
+		opt := &SshOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewSsh(*opt)
+		}
+	case "mieru":
+		opt := &MieruOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewMieru(*opt)
+		}
+	case "anytls":
+		opt := &AnyTLSOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewAnyTLS(*opt)
+		}
+	case "sudoku":
+		opt := &SudokuOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewSudoku(*opt)
+		}
+	case "masque":
+		opt := &MasqueOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewMasque(*opt)
+		}
+	case "trusttunnel":
+		opt := &TrustTunnelOption{BasicOption: basicOption}
+		if err = decoder.Decode(mapping, opt); err == nil {
+			proxy, err = NewTrustTunnel(*opt)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported protocol type in multi-protocol: %s", proxyType)
+	}
+
+	return proxy, err
+}
+```
+
+**Step 2: Verify it compiles**
+
+Run: `go build ./adapter/outbound/...`
+Expected: success
+
+**Step 3: Commit**
+
+```bash
+git add adapter/outbound/multi_protocol.go
+git commit -m "feat(multi-protocol): implement core MultiProtocol outbound adapter"
+```
+
+---
+
+### Task 3: Add parser case in adapter/parser.go
+
+**Files:**
+- Modify: `adapter/parser.go`
+
+**Step 1: Add multi-protocol case**
+
+Before the `default:` case, add:
+
+```go
+	case "multi-protocol":
+		mpOption := &outbound.MultiProtocolOption{BasicOption: basicOption}
+		err = decoder.Decode(mapping, mpOption)
+		if err != nil {
+			break
+		}
+		proxy, err = outbound.NewMultiProtocol(*mpOption)
+```
+
+**Step 2: Verify it compiles**
+
+Run: `go build ./adapter/...`
+Expected: success
+
+**Step 3: Commit**
+
+```bash
+git add adapter/parser.go
+git commit -m "feat(multi-protocol): add config parsing support"
+```
+
+---
+
+### Task 4: Add config example in docs
+
+**Files:**
+- Modify: `docs/config.yaml`
+
+**Step 1: Add config example**
+
+After the last proxy example (before `# dns`), add:
+
+```yaml
+  # multi-protocol
+  # Bundles multiple protocols into a single logical node with priority-based failover.
+  # Protocols are ordered by priority (first = highest). On dial failure, automatically
+  # falls back to the next protocol. Uses shadow dials to recover higher-priority protocols.
+  - name: multi-protocol-example
+    type: multi-protocol
+    protocols:
+      - type: hysteria2
+        server: 1.2.3.4
+        port: 443
+        password: password
+      - type: trojan
+        server: 1.2.3.4
+        port: 8443
+        password: password
+        sni: example.com
+    # max-failures: 3       # consecutive failures to mark protocol unavailable (default: 3)
+    # dial-timeout: 5       # per-protocol dial timeout in seconds (default: 5)
+    # probe-rate: 0.1       # shadow dial probability when degraded (default: 0.1)
+    # min-probe-rate: 0.02  # minimum probe rate (default: 0.02)
+```
+
+**Step 2: Commit**
+
+```bash
+git add docs/config.yaml
+git commit -m "docs: add multi-protocol config example"
+```
+
+---
+
+### Task 5: Write unit tests
+
+**Files:**
+- Create: `adapter/outbound/multi_protocol_test.go`
+
+**Step 1: Write tests**
+
+Test cases to cover:
+1. **Normal dial**: highest priority protocol works → returns connection
+2. **Inline failover**: first protocol fails → falls back to second
+3. **Max failures**: protocol marked unavailable after N failures
+4. **Active index update**: after marking protocol dead, activeIndex advances
+5. **Reset all on all dead**: when all protocols fail, reset to alive
+6. **Shadow dial trigger**: only triggered when degraded (activeIndex > 0)
+7. **Adaptive probe rate**: rate decreases with shadow failures
+8. **UDP dial**: ListenPacketContext follows same fallback logic
+9. **Single protocol**: behaves like regular proxy
+10. **Context cancellation**: stops retrying when context done
+
+Use mock ProxyAdapter implementations for testing.
+
+**Step 2: Run tests**
+
+Run: `go test ./adapter/outbound/ -run TestMultiProtocol -v`
+Expected: all pass
+
+**Step 3: Commit**
+
+```bash
+git add adapter/outbound/multi_protocol_test.go
+git commit -m "test(multi-protocol): add unit tests"
+```
+
+---
+
+### Task 6: Integration verification
+
+**Step 1: Build full binary**
+
+Run: `make darwin-arm64` (or appropriate target)
+Expected: success
+
+**Step 2: Test with config file**
+
+Create a test config with `multi-protocol` node and verify it parses correctly.
+
+**Step 3: Commit any fixes**
+
+```bash
+git commit -m "fix(multi-protocol): integration fixes"
+```
