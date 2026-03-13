@@ -47,10 +47,11 @@ proxies:
         uuid: "xxx"
 
     # Optional (all have defaults)
-    max-failures: 3        # Consecutive failures to mark unavailable (default: 3)
-    dial-timeout: 5        # Per-protocol dial timeout in seconds (default: 5)
-    probe-rate: 0.1        # Shadow dial probability when degraded (default: 10%)
-    min-probe-rate: 0.02   # Minimum probe rate after repeated failures (default: 2%)
+    max-failures: 3          # Consecutive failures to mark unavailable (default: 3)
+    dial-timeout: 5          # Per-protocol dial timeout in seconds (default: 5)
+    probe-rate: 0.1          # Shadow dial probability when degraded (default: 10%)
+    min-probe-rate: 0.02     # Minimum probe rate after repeated failures (default: 2%)
+    recovery-threshold: 2    # Consecutive shadow dial successes needed to recover (default: 2)
 ```
 
 All existing protocol types are supported. Each protocol entry uses the same config format as a standalone proxy of that type (minus `name`).
@@ -75,18 +76,20 @@ type MultiProtocolOption struct {
     Protocols    []map[string]any `proxy:"protocols"`
     MaxFailures  int              `proxy:"max-failures,omitempty"`  // default: 3
     DialTimeout  int              `proxy:"dial-timeout,omitempty"`  // default: 5 (seconds)
-    ProbeRate    float64          `proxy:"probe-rate,omitempty"`    // default: 0.1
-    MinProbeRate float64          `proxy:"min-probe-rate,omitempty"` // default: 0.02
+    ProbeRate          float64          `proxy:"probe-rate,omitempty"`           // default: 0.1
+    MinProbeRate       float64          `proxy:"min-probe-rate,omitempty"`       // default: 0.02
+    RecoveryThreshold  int              `proxy:"recovery-threshold,omitempty"`   // default: 2
 }
 
 type MultiProtocol struct {
     *Base
-    protocols    []*protocolState
-    activeIndex  atomic.Int32
-    maxFailures  int32
-    dialTimeout  time.Duration
-    probeRate    float64
-    minProbeRate float64
+    protocols         []*protocolState
+    activeIndex       atomic.Int32
+    maxFailures       int32
+    dialTimeout       time.Duration
+    probeRate         float64
+    minProbeRate      float64
+    recoveryThreshold int32
 }
 
 type protocolState struct {
@@ -393,10 +396,11 @@ type MultiProtocolOption struct {
 	BasicOption
 	Name         string           `proxy:"name"`
 	Protocols    []map[string]any `proxy:"protocols"`
-	MaxFailures  int              `proxy:"max-failures,omitempty"`
-	DialTimeout  int              `proxy:"dial-timeout,omitempty"`
-	ProbeRate    float64          `proxy:"probe-rate,omitempty"`
-	MinProbeRate float64          `proxy:"min-probe-rate,omitempty"`
+	MaxFailures       int              `proxy:"max-failures,omitempty"`
+	DialTimeout       int              `proxy:"dial-timeout,omitempty"`
+	ProbeRate         float64          `proxy:"probe-rate,omitempty"`
+	MinProbeRate      float64          `proxy:"min-probe-rate,omitempty"`
+	RecoveryThreshold int              `proxy:"recovery-threshold,omitempty"`
 }
 
 type protocolState struct {
@@ -408,16 +412,17 @@ type protocolState struct {
 	probing       atomic.Bool    // guard against concurrent shadow dials
 }
 
-const recoveryThreshold int32 = 2 // consecutive shadow successes needed to recover
+const defaultRecoveryThreshold = 2
 
 type MultiProtocol struct {
 	*Base
-	protocols    []*protocolState
-	activeIndex  atomic.Int32
-	maxFailures  int32
-	dialTimeout  time.Duration
-	probeRate    float64
-	minProbeRate float64
+	protocols         []*protocolState
+	activeIndex       atomic.Int32
+	maxFailures       int32
+	dialTimeout       time.Duration
+	probeRate         float64
+	minProbeRate      float64
+	recoveryThreshold int32
 }
 
 func NewMultiProtocol(option MultiProtocolOption) (*MultiProtocol, error) {
@@ -440,6 +445,10 @@ func NewMultiProtocol(option MultiProtocolOption) (*MultiProtocol, error) {
 	minProbeRate := option.MinProbeRate
 	if minProbeRate <= 0 {
 		minProbeRate = defaultMinProbeRate
+	}
+	recoveryThreshold := option.RecoveryThreshold
+	if recoveryThreshold <= 0 {
+		recoveryThreshold = defaultRecoveryThreshold
 	}
 
 	decoder := structure.NewDecoder(structure.Option{
@@ -473,11 +482,12 @@ func NewMultiProtocol(option MultiProtocolOption) (*MultiProtocol, error) {
 			RoutingMark: option.RoutingMark,
 			Prefer:      option.IPVersion,
 		}),
-		protocols:    protocols,
-		maxFailures:  int32(maxFailures),
-		dialTimeout:  time.Duration(dialTimeout) * time.Second,
-		probeRate:    probeRate,
-		minProbeRate: minProbeRate,
+		protocols:         protocols,
+		maxFailures:       int32(maxFailures),
+		dialTimeout:       time.Duration(dialTimeout) * time.Second,
+		probeRate:         probeRate,
+		minProbeRate:      minProbeRate,
+		recoveryThreshold: int32(recoveryThreshold),
 	}
 	return mp, nil
 }
@@ -711,7 +721,7 @@ func (m *MultiProtocol) triggerShadowDial(udp bool) {
 
 			if err == nil {
 				newCount := ps.recoveryCount.Add(1)
-				if newCount >= recoveryThreshold {
+				if newCount >= m.recoveryThreshold {
 					ps.alive.Store(true)
 					ps.failCount.Store(0)
 					ps.shadowFails.Store(0)
@@ -922,10 +932,11 @@ After the last proxy example (before `# dns`), add:
         port: 8443
         password: password
         sni: example.com
-    # max-failures: 3       # consecutive failures to mark protocol unavailable (default: 3)
-    # dial-timeout: 5       # per-protocol dial timeout in seconds (default: 5)
-    # probe-rate: 0.1       # shadow dial probability when degraded (default: 0.1)
-    # min-probe-rate: 0.02  # minimum probe rate (default: 0.02)
+    # max-failures: 3          # consecutive failures to mark protocol unavailable (default: 3)
+    # dial-timeout: 5          # per-protocol dial timeout in seconds (default: 5)
+    # probe-rate: 0.1          # shadow dial probability when degraded (default: 0.1)
+    # min-probe-rate: 0.02     # minimum probe rate (default: 0.02)
+    # recovery-threshold: 2    # consecutive shadow successes to recover (default: 2)
 ```
 
 **Step 2: Commit**
