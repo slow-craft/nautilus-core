@@ -401,11 +401,38 @@ func (m *MultiProtocol) adaptiveRate(p *protocolState) float64 {
 	return rate
 }
 
+// allowedMultiProtocolTypes defines the whitelist of protocol types that can be
+// used as sub-protocols in multi-protocol. L3 protocols (wireguard, masque) are
+// excluded because they operate at the IP layer and are incompatible with
+// application-layer failover.
+var allowedMultiProtocolTypes = map[string]bool{
+	"ss":          true,
+	"ssr":         true,
+	"socks5":      true,
+	"http":        true,
+	"vmess":       true,
+	"vless":       true,
+	"snell":       true,
+	"trojan":      true,
+	"hysteria":    true,
+	"hysteria2":   true,
+	"tuic":        true,
+	"ssh":         true,
+	"mieru":       true,
+	"anytls":      true,
+	"sudoku":      true,
+	"trusttunnel": true,
+}
+
 // parseProtocolProxy creates a ProxyAdapter from a protocol config map.
 func parseProtocolProxy(decoder *structure.Decoder, mapping map[string]any, basicOption BasicOption) (ProxyAdapter, error) {
 	proxyType, ok := mapping["type"].(string)
 	if !ok {
 		return nil, fmt.Errorf("missing type")
+	}
+
+	if !allowedMultiProtocolTypes[proxyType] {
+		return nil, fmt.Errorf("protocol type %q is not allowed in multi-protocol (L3 protocols like wireguard/masque are not supported)", proxyType)
 	}
 
 	// Auto-generate name if not provided, so sub-protocols don't require explicit names.
@@ -479,11 +506,6 @@ func parseProtocolProxy(decoder *structure.Decoder, mapping map[string]any, basi
 		if err = decoder.Decode(mapping, opt); err == nil {
 			proxy, err = NewHysteria2(*opt)
 		}
-	case "wireguard":
-		opt := &WireGuardOption{BasicOption: basicOption}
-		if err = decoder.Decode(mapping, opt); err == nil {
-			proxy, err = NewWireGuard(*opt)
-		}
 	case "tuic":
 		opt := &TuicOption{BasicOption: basicOption}
 		if err = decoder.Decode(mapping, opt); err == nil {
@@ -508,11 +530,6 @@ func parseProtocolProxy(decoder *structure.Decoder, mapping map[string]any, basi
 		opt := &SudokuOption{BasicOption: basicOption}
 		if err = decoder.Decode(mapping, opt); err == nil {
 			proxy, err = NewSudoku(*opt)
-		}
-	case "masque":
-		opt := &MasqueOption{BasicOption: basicOption}
-		if err = decoder.Decode(mapping, opt); err == nil {
-			proxy, err = NewMasque(*opt)
 		}
 	case "trusttunnel":
 		opt := &TrustTunnelOption{BasicOption: basicOption}
