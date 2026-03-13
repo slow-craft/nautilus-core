@@ -1147,6 +1147,28 @@ proxies: # socks5
     # quic: true # 默认为false
     # congestion-controller: bbr
 
+  # multi-protocol
+  # Bundles multiple protocols into a single logical node with priority-based failover.
+  # Protocols are ordered by priority (first = highest). On dial failure, automatically
+  # falls back to the next protocol. Uses shadow dials to recover higher-priority protocols.
+  - name: multi-protocol-example
+    type: multi-protocol
+    protocols:
+      - type: hysteria2
+        server: 1.2.3.4
+        port: 443
+        password: password
+      - type: trojan
+        server: 1.2.3.4
+        port: 8443
+        password: password
+        sni: example.com
+    # max-failures: 3          # consecutive failures to mark protocol unavailable (default: 3)
+    # dial-timeout: 5          # per-protocol dial timeout in seconds (default: 5)
+    # probe-rate: 0.1          # shadow dial probability when degraded (default: 0.1)
+    # min-probe-rate: 0.02     # minimum probe rate (default: 0.02)
+    # recovery-threshold: 2    # consecutive shadow successes to recover (default: 2)
+
 # dns 出站会将请求劫持到内部 dns 模块，所有请求均在内部处理
   - name: "dns-out"
     type: dns
