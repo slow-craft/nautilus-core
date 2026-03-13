@@ -173,6 +173,13 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 			break
 		}
 		proxy, err = outbound.NewTrustTunnel(*trustTunnelOption)
+	case "multi-protocol":
+		mpOption := &outbound.MultiProtocolOption{BasicOption: basicOption}
+		err = decoder.Decode(mapping, mpOption)
+		if err != nil {
+			break
+		}
+		proxy, err = outbound.NewMultiProtocol(*mpOption)
 	default:
 		return nil, fmt.Errorf("unsupport proxy type: %s", proxyType)
 	}
