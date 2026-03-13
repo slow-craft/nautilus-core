@@ -52,6 +52,8 @@ type MultiProtocol struct {
 	probeRate         float64
 	minProbeRate      float64
 	recoveryThreshold int32
+	cancel            context.CancelFunc
+	ctx               context.Context
 }
 
 func NewMultiProtocol(option MultiProtocolOption) (*MultiProtocol, error) {
@@ -101,6 +103,7 @@ func NewMultiProtocol(option MultiProtocolOption) (*MultiProtocol, error) {
 		}
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	mp := &MultiProtocol{
 		Base: NewBase(BaseOption{
 			Name:        option.Name,
@@ -117,6 +120,8 @@ func NewMultiProtocol(option MultiProtocolOption) (*MultiProtocol, error) {
 		probeRate:         probeRate,
 		minProbeRate:      minProbeRate,
 		recoveryThreshold: int32(recoveryThreshold),
+		ctx:               ctx,
+		cancel:            cancel,
 	}
 	return mp, nil
 }
@@ -124,8 +129,10 @@ func NewMultiProtocol(option MultiProtocolOption) (*MultiProtocol, error) {
 func (m *MultiProtocol) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
 	var lastErr error
 	startIdx := int(m.activeIndex.Load())
+	n := len(m.protocols)
 
-	for i := startIdx; i < len(m.protocols); i++ {
+	for j := 0; j < n; j++ {
+		i := (startIdx + j) % n
 		p := m.protocols[i]
 		if !p.alive.Load() {
 			continue
@@ -137,7 +144,10 @@ func (m *MultiProtocol) DialContext(ctx context.Context, metadata *C.Metadata) (
 
 		if err == nil {
 			p.failCount.Store(0)
-			if i > 0 {
+			if int32(i) < m.activeIndex.Load() {
+				m.activeIndex.Store(int32(i))
+			}
+			if i != 0 {
 				m.triggerShadowDial(false)
 			}
 			return conn, nil
@@ -167,8 +177,10 @@ func (m *MultiProtocol) DialContext(ctx context.Context, metadata *C.Metadata) (
 func (m *MultiProtocol) ListenPacketContext(ctx context.Context, metadata *C.Metadata) (C.PacketConn, error) {
 	var lastErr error
 	startIdx := int(m.activeIndex.Load())
+	n := len(m.protocols)
 
-	for i := startIdx; i < len(m.protocols); i++ {
+	for j := 0; j < n; j++ {
+		i := (startIdx + j) % n
 		p := m.protocols[i]
 		if !p.alive.Load() || !p.proxy.SupportUDP() {
 			continue
@@ -180,7 +192,10 @@ func (m *MultiProtocol) ListenPacketContext(ctx context.Context, metadata *C.Met
 
 		if err == nil {
 			p.failCount.Store(0)
-			if i > 0 {
+			if int32(i) < m.activeIndex.Load() {
+				m.activeIndex.Store(int32(i))
+			}
+			if i != 0 {
 				m.triggerShadowDial(true)
 			}
 			return pc, nil
@@ -213,6 +228,15 @@ func (m *MultiProtocol) Addr() string {
 		return m.protocols[idx].proxy.Addr()
 	}
 	return m.protocols[0].proxy.Addr()
+}
+
+func (m *MultiProtocol) SupportUDP() bool {
+	for _, p := range m.protocols {
+		if p.alive.Load() && p.proxy.SupportUDP() {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *MultiProtocol) SupportUOT() bool {
@@ -255,6 +279,7 @@ func (m *MultiProtocol) MarshalJSON() ([]byte, error) {
 }
 
 func (m *MultiProtocol) Close() error {
+	m.cancel()
 	for _, p := range m.protocols {
 		_ = p.proxy.Close()
 	}
@@ -307,8 +332,6 @@ func (m *MultiProtocol) triggerShadowDial(udp bool) {
 		return
 	}
 
-	probeMeta := newProbeMetadata(udp)
-
 	for i := 0; i < activeIdx; i++ {
 		p := m.protocols[i]
 		if p.alive.Load() || p.probing.Load() {
@@ -330,7 +353,9 @@ func (m *MultiProtocol) triggerShadowDial(udp bool) {
 		go func(idx int, ps *protocolState) {
 			defer ps.probing.Store(false)
 
-			ctx, cancel := context.WithTimeout(context.Background(), m.dialTimeout)
+			probeMeta := newProbeMetadata(udp)
+
+			ctx, cancel := context.WithTimeout(m.ctx, m.dialTimeout)
 			defer cancel()
 
 			var err error
@@ -381,6 +406,21 @@ func parseProtocolProxy(decoder *structure.Decoder, mapping map[string]any, basi
 	proxyType, ok := mapping["type"].(string)
 	if !ok {
 		return nil, fmt.Errorf("missing type")
+	}
+
+	// Auto-generate name if not provided, so sub-protocols don't require explicit names.
+	// Use a shallow copy to avoid mutating the caller's map.
+	if _, hasName := mapping["name"]; !hasName {
+		copied := make(map[string]any, len(mapping)+1)
+		for k, v := range mapping {
+			copied[k] = v
+		}
+		if server, ok := mapping["server"].(string); ok {
+			copied["name"] = fmt.Sprintf("%s-%s", proxyType, server)
+		} else {
+			copied["name"] = proxyType
+		}
+		mapping = copied
 	}
 
 	var (

@@ -189,6 +189,9 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 	}
 
 	if muxMapping, muxExist := mapping["smux"].(map[string]any); muxExist {
+		if proxyType == "multi-protocol" {
+			return nil, fmt.Errorf("smux is not compatible with multi-protocol: mux sessions break on protocol failover")
+		}
 		muxOption := &outbound.SingMuxOption{}
 		err = decoder.Decode(muxMapping, muxOption)
 		if err != nil {

@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"net/netip"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/metacubex/mihomo/common/structure"
 	C "github.com/metacubex/mihomo/constant"
 )
 
@@ -64,6 +66,7 @@ func newTestMultiProtocol(name string, proxies []ProxyAdapter, opts ...func(*Mul
 			hasUDP = true
 		}
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	mp := &MultiProtocol{
 		Base: NewBase(BaseOption{
 			Name: name,
@@ -77,6 +80,8 @@ func newTestMultiProtocol(name string, proxies []ProxyAdapter, opts ...func(*Mul
 		probeRate:         0.1,
 		minProbeRate:      0.02,
 		recoveryThreshold: 2,
+		ctx:               ctx,
+		cancel:            cancel,
 	}
 	for _, opt := range opts {
 		opt(mp)
@@ -460,5 +465,423 @@ func TestMultiProtocol_Close(t *testing.T) {
 	}
 	if !p2.closed.Load() {
 		t.Fatal("proto2 should be closed")
+	}
+}
+
+// --- RED/GREEN bug verification tests ---
+
+func TestMultiProtocol_Bug1_SharedProbeMetaRace(t *testing.T) {
+	// Bug 1: triggerShadowDial creates ONE probeMeta and passes it to multiple
+	// concurrent goroutines. Proxy implementations modify metadata.DstIP during
+	// DialContext, causing a data race.
+	//
+	// This test must be run with -race to detect the issue.
+
+	// p0: dead, will be probed — modifies metadata.DstIP in DialContext
+	p0 := newMockProxy("proto0", "1.1.1.1:443", false)
+	p0.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		// Simulate what base.go:155, direct.go:58 etc. do: write to metadata.DstIP
+		metadata.DstIP = netip.MustParseAddr("10.0.0.1")
+		time.Sleep(10 * time.Millisecond)
+		return nil, errors.New("still down")
+	}
+
+	// p1: dead, will also be probed — also modifies metadata.DstIP
+	p1 := newMockProxy("proto1", "2.2.2.2:443", false)
+	p1.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		metadata.DstIP = netip.MustParseAddr("10.0.0.2")
+		time.Sleep(10 * time.Millisecond)
+		return nil, errors.New("still down")
+	}
+
+	// p2: alive, active protocol — succeeds
+	p2 := newMockProxy("proto2", "3.3.3.3:443", false)
+	p2.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		c1, c2 := net.Pipe()
+		_ = c2.Close()
+		return NewConn(c1, p2), nil
+	}
+
+	mp := newTestMultiProtocol("test-race", []ProxyAdapter{p0, p1, p2}, func(m *MultiProtocol) {
+		m.probeRate = 1.0    // always probe
+		m.minProbeRate = 1.0 // always probe
+		m.maxFailures = 1
+	})
+
+	// Mark p0 and p1 as dead, set activeIndex to 2
+	mp.protocols[0].alive.Store(false)
+	mp.protocols[1].alive.Store(false)
+	mp.activeIndex.Store(2)
+
+	// Trigger many dials concurrently to amplify the race window
+	for i := 0; i < 50; i++ {
+		conn, err := mp.DialContext(context.Background(), newTestMetadata())
+		if err != nil {
+			t.Fatalf("dial %d: unexpected error: %v", i, err)
+		}
+		_ = conn.Close()
+	}
+
+	// Give shadow dial goroutines time to complete
+	time.Sleep(100 * time.Millisecond)
+}
+
+func TestMultiProtocol_Bug2_LoopSkipsRecoveredProtocols(t *testing.T) {
+	// Bug 2: If activeIndex=2 and protocol[0] has recovered (alive=true),
+	// but protocol[2] fails, the loop starting from startIdx=2 never checks
+	// protocol[0] even though it's alive.
+
+	p0Called := false
+	p0 := newMockProxy("proto0", "1.1.1.1:443", false)
+	p0.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		p0Called = true
+		c1, c2 := net.Pipe()
+		_ = c2.Close()
+		return NewConn(c1, p0), nil
+	}
+
+	p1 := newMockProxy("proto1", "2.2.2.2:443", false)
+	p1.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		return nil, errors.New("p1 down")
+	}
+
+	p2 := newMockProxy("proto2", "3.3.3.3:443", false)
+	p2.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		return nil, errors.New("p2 down")
+	}
+
+	mp := newTestMultiProtocol("test", []ProxyAdapter{p0, p1, p2}, func(m *MultiProtocol) {
+		m.maxFailures = 100 // don't mark dead from test failures
+	})
+
+	// Simulate: p0 recovered (alive=true), p1 dead, p2 alive but will fail this dial.
+	// activeIndex stuck at 2 (e.g., not yet updated by shadow dial).
+	mp.protocols[0].alive.Store(true)
+	mp.protocols[1].alive.Store(false)
+	mp.protocols[2].alive.Store(true)
+	mp.activeIndex.Store(2)
+
+	conn, err := mp.DialContext(context.Background(), newTestMetadata())
+	if err == nil && conn != nil {
+		_ = conn.Close()
+	}
+
+	// The bug: p0 is alive and working but the loop starts at index 2,
+	// so p0 is never tried. If p2 also fails, we get an error even though
+	// p0 could have succeeded.
+	if !p0Called {
+		t.Fatal("BUG: protocol[0] is alive but was never tried because loop starts at activeIndex=2")
+	}
+}
+
+func TestMultiProtocol_Bug3_SubProtocolWithoutName(t *testing.T) {
+	// Bug 3: Sub-protocol configs typically don't include "name" (as shown in
+	// docs/config.yaml). The decoder treats "name" as required, so parsing
+	// fails entirely. parseProtocolProxy should auto-generate a name.
+	decoder := structure.NewDecoder(structure.Option{
+		TagName: "proxy", WeaklyTypedInput: true,
+		KeyReplacer: structure.DefaultKeyReplacer,
+	})
+
+	// Typical sub-protocol config without "name" field (matches docs/config.yaml)
+	mapping := map[string]any{
+		"type":   "socks5",
+		"server": "127.0.0.1",
+		"port":   1080,
+	}
+
+	proxy, err := parseProtocolProxy(decoder, mapping, BasicOption{})
+	if err != nil {
+		t.Fatalf("BUG: parseProtocolProxy should succeed without 'name' field, got: %v", err)
+	}
+
+	if proxy.Name() == "" {
+		t.Fatal("BUG: sub-protocol should have auto-generated name, got empty")
+	}
+}
+
+func TestMultiProtocol_Bug4_SupportUDPWhenAllUDPDead(t *testing.T) {
+	// Bug 4: SupportUDP() is set once at construction based on whether ANY
+	// protocol supports UDP. If the only UDP-capable protocol dies,
+	// SupportUDP() still returns true, misleading callers.
+
+	// p0: no UDP
+	p0 := newMockProxy("proto0", "1.1.1.1:443", false)
+	p0.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		c1, c2 := net.Pipe()
+		_ = c2.Close()
+		return NewConn(c1, p0), nil
+	}
+
+	// p1: UDP capable
+	p1 := newMockProxy("proto1", "2.2.2.2:443", true)
+
+	mp := newTestMultiProtocol("test", []ProxyAdapter{p0, p1})
+
+	// Initially SupportUDP should be true
+	if !mp.SupportUDP() {
+		t.Fatal("expected SupportUDP=true initially")
+	}
+
+	// Mark the only UDP protocol as dead
+	mp.protocols[1].alive.Store(false)
+
+	// SupportUDP() should reflect that no alive protocol supports UDP
+	if mp.SupportUDP() {
+		t.Fatal("BUG: SupportUDP() still true when the only UDP-capable protocol is dead")
+	}
+}
+
+func TestMultiProtocol_Bug5_ResetAllIfAllDeadRace(t *testing.T) {
+	// Bug 5: resetAllIfAllDead has no synchronization. Multiple concurrent
+	// DialContext calls can all detect "all dead" and call resetAllIfAllDead
+	// concurrently. While the reset itself is idempotent, the check-then-act
+	// (check all dead → reset) is not atomic, so there's a window where
+	// some goroutines see partially-reset state.
+	//
+	// Run with -race to detect any data races.
+
+	p0 := newMockProxy("proto0", "1.1.1.1:443", false)
+	p0.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		return nil, errors.New("fail")
+	}
+	p1 := newMockProxy("proto1", "2.2.2.2:443", false)
+	p1.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		return nil, errors.New("fail")
+	}
+
+	mp := newTestMultiProtocol("test", []ProxyAdapter{p0, p1}, func(m *MultiProtocol) {
+		m.maxFailures = 1
+	})
+
+	// Run many concurrent dials that all fail → all trigger resetAllIfAllDead
+	done := make(chan struct{})
+	for i := 0; i < 20; i++ {
+		go func() {
+			defer func() { done <- struct{}{} }()
+			for j := 0; j < 50; j++ {
+				_, _ = mp.DialContext(context.Background(), newTestMetadata())
+			}
+		}()
+	}
+	for i := 0; i < 20; i++ {
+		<-done
+	}
+
+	// After all goroutines finish, state should be consistent:
+	// all protocols alive, activeIndex=0
+	for i, p := range mp.protocols {
+		if !p.alive.Load() {
+			t.Fatalf("protocol[%d] should be alive after reset", i)
+		}
+	}
+	if mp.activeIndex.Load() != 0 {
+		t.Fatalf("activeIndex should be 0, got %d", mp.activeIndex.Load())
+	}
+}
+
+func TestMultiProtocol_Bug6_ShadowDialAfterClose(t *testing.T) {
+	// Bug 6: Close() shuts down sub-proxies but shadow dial goroutines use
+	// context.Background() with no cancellation. They may call DialContext
+	// on already-closed proxies after Close() returns.
+
+	dialAfterClose := atomic.Bool{}
+
+	p0 := newMockProxy("proto0", "1.1.1.1:443", false)
+	p0.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		// Real proxies check context during dial. Simulate slow dial that respects ctx.
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(50 * time.Millisecond):
+		}
+		// If we reach here after Close(), the context wasn't cancelled properly
+		if p0.closed.Load() {
+			dialAfterClose.Store(true)
+		}
+		return nil, errors.New("down")
+	}
+
+	p1 := newMockProxy("proto1", "2.2.2.2:443", false)
+	p1.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		c1, c2 := net.Pipe()
+		_ = c2.Close()
+		return NewConn(c1, p1), nil
+	}
+
+	mp := newTestMultiProtocol("test", []ProxyAdapter{p0, p1}, func(m *MultiProtocol) {
+		m.probeRate = 1.0
+		m.minProbeRate = 1.0
+		m.maxFailures = 1
+	})
+
+	// Mark p0 dead, activeIndex=1
+	mp.protocols[0].alive.Store(false)
+	mp.activeIndex.Store(1)
+
+	// Trigger shadow dial (p0 will be probed in background goroutine)
+	conn, err := mp.DialContext(context.Background(), newTestMetadata())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	_ = conn.Close()
+
+	// Close immediately — shadow dial goroutine should be cancelled
+	_ = mp.Close()
+
+	// Wait for shadow dial goroutine to finish
+	time.Sleep(200 * time.Millisecond)
+
+	if dialAfterClose.Load() {
+		t.Fatal("BUG: shadow dial goroutine called DialContext on a closed proxy")
+	}
+}
+
+func TestMultiProtocol_Bug7_ParseProtocolProxyMutatesInput(t *testing.T) {
+	// Bug 7: parseProtocolProxy writes "name" into the input mapping when not
+	// present, mutating the caller's data. This is a side effect that could
+	// affect config reloads or shared references.
+	decoder := structure.NewDecoder(structure.Option{
+		TagName: "proxy", WeaklyTypedInput: true,
+		KeyReplacer: structure.DefaultKeyReplacer,
+	})
+
+	mapping := map[string]any{
+		"type":   "socks5",
+		"server": "127.0.0.1",
+		"port":   1080,
+	}
+
+	// Record original keys
+	_, hadName := mapping["name"]
+	if hadName {
+		t.Fatal("test setup: mapping should not have 'name'")
+	}
+
+	_, _ = parseProtocolProxy(decoder, mapping, BasicOption{})
+
+	// Check if mapping was mutated
+	_, hasNameNow := mapping["name"]
+	if hasNameNow {
+		t.Fatal("BUG: parseProtocolProxy mutated the input mapping by adding 'name' key")
+	}
+}
+
+func TestMultiProtocol_Bug8_TCPFailuresPoisonUDP(t *testing.T) {
+	// Bug 8: TCP and UDP share the same failCount and alive state.
+	// A burst of TCP failures can mark a protocol dead, blocking UDP
+	// even if UDP would succeed.
+
+	p0 := newMockProxy("proto0", "1.1.1.1:443", true)
+	// TCP always fails
+	p0.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		return nil, errors.New("tcp fail")
+	}
+	// UDP always succeeds
+	p0.listenFunc = func(ctx context.Context, metadata *C.Metadata) (C.PacketConn, error) {
+		pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+		if err != nil {
+			return nil, err
+		}
+		return newPacketConn(pc, p0), nil
+	}
+
+	p1 := newMockProxy("proto1", "2.2.2.2:443", true)
+	p1.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		c1, c2 := net.Pipe()
+		_ = c2.Close()
+		return NewConn(c1, p1), nil
+	}
+	p1.listenFunc = func(ctx context.Context, metadata *C.Metadata) (C.PacketConn, error) {
+		pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+		if err != nil {
+			return nil, err
+		}
+		return newPacketConn(pc, p1), nil
+	}
+
+	mp := newTestMultiProtocol("test", []ProxyAdapter{p0, p1}, func(m *MultiProtocol) {
+		m.maxFailures = 3
+	})
+
+	meta := newTestMetadata()
+
+	// 3 TCP failures on p0 → marks p0 dead
+	for i := 0; i < 3; i++ {
+		conn, _ := mp.DialContext(context.Background(), meta)
+		if conn != nil {
+			_ = conn.Close()
+		}
+	}
+
+	// p0 should be dead now
+	if mp.protocols[0].alive.Load() {
+		t.Fatal("expected p0 dead after 3 TCP failures")
+	}
+
+	// Now try UDP — p0 should still be usable for UDP since UDP works fine
+	udpMeta := &C.Metadata{NetWork: C.UDP, DstPort: 53, Host: "dns.example.com"}
+	pc, err := mp.ListenPacketContext(context.Background(), udpMeta)
+	if err != nil {
+		t.Fatalf("UDP should succeed, got: %v", err)
+	}
+	_ = pc.Close()
+
+	// Check: did UDP fall through to p1 (indicating p0 was poisoned)?
+	// If p0 is dead, UDP had to use p1 instead of the preferred p0.
+	if !mp.protocols[0].alive.Load() {
+		t.Log("NOTE: TCP failures poisoned UDP — p0 is dead for UDP despite UDP working fine")
+		t.Log("This is a design limitation: TCP and UDP share failCount/alive state")
+		// This is a design issue, not necessarily a bug to fix.
+		// Mark as informational rather than fatal.
+	}
+}
+
+func TestMultiProtocol_Bug10_WrapAroundDoesNotUpdateActiveIndex(t *testing.T) {
+	// Bug 10: When wrap-around finds a working protocol at a LOWER index
+	// than activeIndex, it should update activeIndex. Otherwise every
+	// subsequent call wastes time trying the failing protocol first.
+	//
+	// Scenario: activeIndex=2, protocol[2] fails once (not dead yet),
+	// wrap-around reaches protocol[0] which succeeds. activeIndex should
+	// now be 0.
+
+	p0 := newMockProxy("proto0", "1.1.1.1:443", false)
+	p0.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		c1, c2 := net.Pipe()
+		_ = c2.Close()
+		return NewConn(c1, p0), nil
+	}
+
+	p1 := newMockProxy("proto1", "2.2.2.2:443", false)
+	p1.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		return nil, errors.New("p1 down")
+	}
+
+	p2 := newMockProxy("proto2", "3.3.3.3:443", false)
+	p2.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		return nil, errors.New("p2 temporarily failing")
+	}
+
+	mp := newTestMultiProtocol("test", []ProxyAdapter{p0, p1, p2}, func(m *MultiProtocol) {
+		m.maxFailures = 100 // high threshold so p2 doesn't get marked dead
+	})
+
+	// Simulate degraded state: activeIndex at 2
+	mp.protocols[0].alive.Store(true)
+	mp.protocols[1].alive.Store(false)
+	mp.protocols[2].alive.Store(true)
+	mp.activeIndex.Store(2)
+
+	// Dial: p2 fails → wrap to p0 which succeeds
+	conn, err := mp.DialContext(context.Background(), newTestMetadata())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	_ = conn.Close()
+
+	// activeIndex should now be updated to 0 (the protocol that succeeded)
+	if idx := mp.activeIndex.Load(); idx != 0 {
+		t.Fatalf("BUG: activeIndex should be 0 after wrap-around found protocol[0] works, got %d", idx)
 	}
 }
