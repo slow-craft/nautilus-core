@@ -98,6 +98,25 @@ type protocolState struct {
 }
 ```
 
+### Failure Counting
+
+**Consecutive failure model** — `failCount` tracks consecutive dial failures per protocol:
+
+- Every dial error: `failCount += 1`
+- Every dial success: `failCount = 0` (reset immediately)
+- When `failCount >= max-failures`: mark protocol as unavailable
+
+```
+Example (max-failures=3):
+  Request 1: fail  → failCount=1
+  Request 2: ok    → failCount=0  ← reset
+  Request 3: fail  → failCount=1  ← restart counting
+  Request 4: fail  → failCount=2
+  Request 5: fail  → failCount=3  ← marked unavailable, switch to next
+```
+
+**All errors count equally** (timeout, connection refused, TLS failure, etc.). The rationale: at the dial/handshake stage, any error means the protocol channel is not working. Upstream target errors happen after a successful proxy connection, so they won't trigger this counter. Future refinement can add error-type filtering if needed.
+
 ### Dial Flow (TCP & UDP)
 
 ```
@@ -109,16 +128,16 @@ DialContext(ctx, metadata) / ListenPacketContext(ctx, metadata):
        dialCtx = context.WithTimeout(ctx, dialTimeout)
        conn, err = protocols[i].proxy.DialContext(dialCtx, metadata)
        if err == nil:
-           protocols[i].failCount.Store(0)
+           protocols[i].failCount.Store(0)   // success resets counter
            if i > 0:  // degraded — trigger shadow dial
                triggerShadowDial(metadata)
            return conn, nil
        else:
-           newFails = protocols[i].failCount.Add(1)
+           newFails = protocols[i].failCount.Add(1)  // consecutive failure
            if newFails >= maxFailures:
                protocols[i].alive.Store(false)
                updateActiveIndex()
-           // continue to next protocol
+           // continue to next protocol (inline failover, same request)
   3. // all protocols failed — reset all to alive for next attempt
      resetAll()
      return nil, lastError
