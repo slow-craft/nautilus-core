@@ -2,7 +2,7 @@ NAME=mihomo
 BINDIR=bin
 BRANCH=$(shell git branch --show-current)
 
-# Extract full version from constant/version.go (e.g., "v1.19.18+shadowtls-plus.0.1.0")
+# Extract full version from constant/version.go
 BASE_VERSION=$(shell grep 'Version.*=' constant/version.go | sed -n 's/.*"\([^"]*\)".*/\1/p')
 COMMIT_HASH=$(shell git rev-parse HEAD)
 COMMIT_TIME=$(shell git log -1 --format=%cd --date=format:'%Y%m%d%H%M%S')
