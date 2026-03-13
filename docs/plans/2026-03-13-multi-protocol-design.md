@@ -90,11 +90,12 @@ type MultiProtocol struct {
 }
 
 type protocolState struct {
-    proxy       C.ProxyAdapter
-    alive       atomic.Bool
-    failCount   atomic.Int32
-    shadowFails atomic.Int32
-    probing     atomic.Bool  // guard against concurrent shadow dials
+    proxy         C.ProxyAdapter
+    alive         atomic.Bool
+    failCount     atomic.Int32   // consecutive dial failures
+    shadowFails   atomic.Int32   // shadow dial failures (for adaptive rate decay)
+    recoveryCount atomic.Int32   // consecutive shadow dial successes (need 2 to recover)
+    probing       atomic.Bool    // guard against concurrent shadow dials
 }
 ```
 
@@ -147,6 +148,25 @@ DialContext(ctx, metadata) / ListenPacketContext(ctx, metadata):
 
 Triggered **only when degraded** (active protocol is not the highest priority). Driven by actual traffic, not timers.
 
+**Recovery requires consecutive successes (N=2):** A single shadow dial success is not enough to mark a protocol as recovered. The protocol must succeed **2 consecutive** shadow dials before being marked alive. This filters out unstable protocols that intermittently succeed.
+
+- Shadow dial success: `recoveryCount += 1`
+- Shadow dial failure: `recoveryCount = 0`, `shadowFails += 1` (probe rate decays)
+- `recoveryCount >= 2`: mark alive, reset all counters, update activeIndex
+
+```
+Example — unstable protocol:
+  Shadow 1: ok    → recoveryCount=1
+  Shadow 2: fail  → recoveryCount=0, shadowFails=1 (probe rate drops)
+  Shadow 3: ok    → recoveryCount=1
+  Shadow 4: fail  → recoveryCount=0, shadowFails=2 (probe rate drops more)
+  → Never reaches 2 consecutive, never cuts back. Probe rate decays naturally.
+
+Example — truly recovered protocol:
+  Shadow 1: ok    → recoveryCount=1
+  Shadow 2: ok    → recoveryCount=2 → marked alive! Cut back to this protocol.
+```
+
 ```
 triggerShadowDial(metadata):
   activeIdx = activeIndex.Load()
@@ -169,11 +189,15 @@ triggerShadowDial(metadata):
           conn, err = protocols[idx].proxy.DialContext(ctx, probeMetadata)
           if err == nil:
               conn.Close()
-              protocols[idx].alive.Store(true)
-              protocols[idx].failCount.Store(0)
-              protocols[idx].shadowFails.Store(0)
-              updateActiveIndex()
+              newCount = protocols[idx].recoveryCount.Add(1)
+              if newCount >= recoveryThreshold:  // default: 2
+                  protocols[idx].alive.Store(true)
+                  protocols[idx].failCount.Store(0)
+                  protocols[idx].shadowFails.Store(0)
+                  protocols[idx].recoveryCount.Store(0)
+                  updateActiveIndex()
           else:
+              protocols[idx].recoveryCount.Store(0)
               protocols[idx].shadowFails.Add(1)
       (i)
 ```
