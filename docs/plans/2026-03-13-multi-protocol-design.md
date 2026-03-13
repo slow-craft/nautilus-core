@@ -274,6 +274,15 @@ func (m *MultiProtocol) resetAll() {
 | `MarshalJSON()` | Include active protocol name + all protocol states |
 | `Close()` | Close all protocol instances |
 
+### Shadow Dial Probe Target
+
+Shadow dials use a hardcoded lightweight probe address instead of the user's actual request metadata:
+
+- **TCP**: `1.1.1.1:443` — verifies proxy channel reachability
+- **UDP**: `1.1.1.1:53` — verifies UDP channel reachability
+
+This avoids wasting a real connection to the user's target. The probe only validates that the proxy channel (handshake + tunnel) works. Not configurable — `1.1.1.1` (Cloudflare) is globally reachable and reliable.
+
 ### Config Parsing
 
 In `adapter/parser.go`, add case `"multi-protocol"`:
@@ -298,6 +307,7 @@ instead of `C.Proxy` (avoids the autoclose/wrapper layers for internal sub-proxi
 - **New connections only**: switching affects new dials; existing connections untouched
 - **Existing connections**: naturally expire/break, then reconnect through current active
 - **UDP**: same logic via `ListenPacketContext`; QUIC handshake failure = protocol unavailable
+- **smux**: each sub-protocol handles its own smux config; multi-protocol layer is transparent
 
 ### Edge Cases
 
@@ -363,6 +373,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand/v2"
+	"net/netip"
 	"sync/atomic"
 	"time"
 
@@ -389,12 +400,15 @@ type MultiProtocolOption struct {
 }
 
 type protocolState struct {
-	proxy       ProxyAdapter
-	alive       atomic.Bool
-	failCount   atomic.Int32
-	shadowFails atomic.Int32
-	probing     atomic.Bool
+	proxy         ProxyAdapter
+	alive         atomic.Bool
+	failCount     atomic.Int32   // consecutive dial failures
+	shadowFails   atomic.Int32   // shadow dial failures (for adaptive rate decay)
+	recoveryCount atomic.Int32   // consecutive shadow dial successes (need 2 to recover)
+	probing       atomic.Bool    // guard against concurrent shadow dials
 }
+
+const recoveryThreshold int32 = 2 // consecutive shadow successes needed to recover
 
 type MultiProtocol struct {
 	*Base
@@ -485,7 +499,7 @@ func (m *MultiProtocol) DialContext(ctx context.Context, metadata *C.Metadata) (
 		if err == nil {
 			p.failCount.Store(0)
 			if i > 0 {
-				m.triggerShadowDial(metadata, false)
+				m.triggerShadowDial(false)
 			}
 			return conn, nil
 		}
@@ -528,7 +542,7 @@ func (m *MultiProtocol) ListenPacketContext(ctx context.Context, metadata *C.Met
 		if err == nil {
 			p.failCount.Store(0)
 			if i > 0 {
-				m.triggerShadowDial(metadata, true)
+				m.triggerShadowDial(true)
 			}
 			return pc, nil
 		}
@@ -631,11 +645,30 @@ func (m *MultiProtocol) resetAllIfAllDead() {
 	m.activeIndex.Store(0)
 }
 
-func (m *MultiProtocol) triggerShadowDial(metadata *C.Metadata, udp bool) {
+// newProbeMetadata creates a lightweight metadata for shadow dial probing.
+// Uses 1.1.1.1:443 (TCP) or 1.1.1.1:53 (UDP) — only verifies the proxy
+// channel is reachable, not the actual target.
+func newProbeMetadata(udp bool) *C.Metadata {
+	meta := &C.Metadata{
+		DstIP:   netip.MustParseAddr("1.1.1.1"),
+	}
+	if udp {
+		meta.DstPort = 53
+		meta.NetWork = C.UDP
+	} else {
+		meta.DstPort = 443
+		meta.NetWork = C.TCP
+	}
+	return meta
+}
+
+func (m *MultiProtocol) triggerShadowDial(udp bool) {
 	activeIdx := int(m.activeIndex.Load())
 	if activeIdx == 0 {
 		return
 	}
+
+	probeMeta := newProbeMetadata(udp)
 
 	for i := 0; i < activeIdx; i++ {
 		p := m.protocols[i]
@@ -663,13 +696,13 @@ func (m *MultiProtocol) triggerShadowDial(metadata *C.Metadata, udp bool) {
 
 			var err error
 			if udp {
-				pc, e := ps.proxy.ListenPacketContext(ctx, metadata)
+				pc, e := ps.proxy.ListenPacketContext(ctx, probeMeta)
 				if e == nil {
 					_ = pc.Close()
 				}
 				err = e
 			} else {
-				conn, e := ps.proxy.DialContext(ctx, metadata)
+				conn, e := ps.proxy.DialContext(ctx, probeMeta)
 				if e == nil {
 					_ = conn.Close()
 				}
@@ -677,13 +710,18 @@ func (m *MultiProtocol) triggerShadowDial(metadata *C.Metadata, udp bool) {
 			}
 
 			if err == nil {
-				ps.alive.Store(true)
-				ps.failCount.Store(0)
-				ps.shadowFails.Store(0)
-				m.updateActiveIndex()
-				log.Infoln("[MultiProtocol] %s: protocol %s recovered via shadow dial",
-					m.Name(), ps.proxy.Name())
+				newCount := ps.recoveryCount.Add(1)
+				if newCount >= recoveryThreshold {
+					ps.alive.Store(true)
+					ps.failCount.Store(0)
+					ps.shadowFails.Store(0)
+					ps.recoveryCount.Store(0)
+					m.updateActiveIndex()
+					log.Infoln("[MultiProtocol] %s: protocol %s recovered via shadow dial",
+						m.Name(), ps.proxy.Name())
+				}
 			} else {
+				ps.recoveryCount.Store(0)
 				ps.shadowFails.Add(1)
 			}
 		}(i, p)
