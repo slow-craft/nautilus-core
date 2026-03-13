@@ -233,6 +233,9 @@ func (m *MultiProtocol) IsL3Protocol(metadata *C.Metadata) bool {
 
 func (m *MultiProtocol) MarshalJSON() ([]byte, error) {
 	activeIdx := m.activeIndex.Load()
+	if int(activeIdx) >= len(m.protocols) {
+		activeIdx = 0
+	}
 	protoStates := make([]map[string]any, 0, len(m.protocols))
 	for i, p := range m.protocols {
 		protoStates = append(protoStates, map[string]any{
