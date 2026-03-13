@@ -159,13 +159,20 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 			break
 		}
 		proxy, err = outbound.NewSudoku(*sudokuOption)
-	case "shadowtls-plus":
-		stpOption := &outbound.ShadowTLSPlusOption{BasicOption: basicOption}
-		err = decoder.Decode(mapping, stpOption)
+	case "masque":
+		masqueOption := &outbound.MasqueOption{BasicOption: basicOption}
+		err = decoder.Decode(mapping, masqueOption)
 		if err != nil {
 			break
 		}
-		proxy, err = outbound.NewShadowTLSPlus(*stpOption)
+		proxy, err = outbound.NewMasque(*masqueOption)
+	case "trusttunnel":
+		trustTunnelOption := &outbound.TrustTunnelOption{BasicOption: basicOption}
+		err = decoder.Decode(mapping, trustTunnelOption)
+		if err != nil {
+			break
+		}
+		proxy, err = outbound.NewTrustTunnel(*trustTunnelOption)
 	default:
 		return nil, fmt.Errorf("unsupport proxy type: %s", proxyType)
 	}
