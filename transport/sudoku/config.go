@@ -32,7 +32,8 @@ type ProtocolConfig struct {
 	PaddingMin int
 	PaddingMax int
 
-	// EnablePureDownlink toggles the bandwidth-optimized downlink mode.
+	// EnablePureDownlink enables the pure Sudoku downlink mode.
+	// When false, the connection uses the bandwidth-optimized packed downlink (requires AEAD).
 	EnablePureDownlink bool
 
 	// Client-only: final target "host:port".
@@ -46,9 +47,10 @@ type ProtocolConfig struct {
 
 	// HTTPMaskMode controls how the HTTP layer behaves:
 	//   - "legacy": write a fake HTTP/1.1 header then switch to raw stream (default, not CDN-compatible)
-	//   - "stream": real HTTP tunnel (stream-one or split), CDN-compatible
+	//   - "stream": real HTTP tunnel (split-stream), CDN-compatible
 	//   - "poll": plain HTTP tunnel (authorize/push/pull), strong restricted-network pass-through
 	//   - "auto": try stream then fall back to poll
+	//   - "ws": WebSocket tunnel (GET upgrade), CDN-friendly
 	HTTPMaskMode string
 
 	// HTTPMaskTLSEnabled enables HTTPS for HTTP tunnel modes (client-side).
@@ -57,6 +59,16 @@ type ProtocolConfig struct {
 
 	// HTTPMaskHost optionally overrides the HTTP Host header / SNI host for HTTP tunnel modes (client-side).
 	HTTPMaskHost string
+
+	// HTTPMaskPathRoot optionally prefixes all HTTP mask paths with a first-level segment.
+	// Example: "aabbcc" => "/aabbcc/session", "/aabbcc/api/v1/upload", ...
+	HTTPMaskPathRoot string
+
+	// HTTPMaskMultiplex controls multiplex behavior when HTTPMask tunnel modes are enabled:
+	//   - "off": disable reuse; each Dial establishes its own HTTPMask tunnel
+	//   - "auto": reuse underlying HTTP connections across multiple tunnel dials (HTTP/1.1 keep-alive / HTTP/2)
+	//   - "on": enable "single tunnel, multi-target" mux (Sudoku-level multiplex; Dial behaves like "auto" otherwise)
+	HTTPMaskMultiplex string
 }
 
 func (c *ProtocolConfig) Validate() error {
@@ -98,9 +110,33 @@ func (c *ProtocolConfig) Validate() error {
 	}
 
 	switch strings.ToLower(strings.TrimSpace(c.HTTPMaskMode)) {
-	case "", "legacy", "stream", "poll", "auto":
+	case "", "legacy", "stream", "poll", "auto", "ws":
 	default:
-		return fmt.Errorf("invalid http-mask-mode: %s, must be one of: legacy, stream, poll, auto", c.HTTPMaskMode)
+		return fmt.Errorf("invalid http-mask-mode: %s, must be one of: legacy, stream, poll, auto, ws", c.HTTPMaskMode)
+	}
+
+	if v := strings.TrimSpace(c.HTTPMaskPathRoot); v != "" {
+		v = strings.Trim(v, "/")
+		if v == "" || strings.Contains(v, "/") {
+			return fmt.Errorf("invalid http-mask-path-root: must be a single path segment")
+		}
+		for i := 0; i < len(v); i++ {
+			ch := v[i]
+			switch {
+			case ch >= 'a' && ch <= 'z':
+			case ch >= 'A' && ch <= 'Z':
+			case ch >= '0' && ch <= '9':
+			case ch == '_' || ch == '-':
+			default:
+				return fmt.Errorf("invalid http-mask-path-root: contains invalid character %q", ch)
+			}
+		}
+	}
+
+	switch strings.ToLower(strings.TrimSpace(c.HTTPMaskMultiplex)) {
+	case "", "off", "auto", "on":
+	default:
+		return fmt.Errorf("invalid http-mask-multiplex: %s, must be one of: off, auto, on", c.HTTPMaskMultiplex)
 	}
 
 	return nil
@@ -127,6 +163,45 @@ func DefaultConfig() *ProtocolConfig {
 		EnablePureDownlink:      true,
 		HandshakeTimeoutSeconds: 5,
 		HTTPMaskMode:            "legacy",
+		HTTPMaskMultiplex:       "off",
+	}
+}
+
+func DerefInt(v *int, def int) int {
+	if v == nil {
+		return def
+	}
+	return *v
+}
+
+func DerefBool(v *bool, def bool) bool {
+	if v == nil {
+		return def
+	}
+	return *v
+}
+
+// ResolvePadding applies defaults and keeps min/max consistent when only one side is provided.
+func ResolvePadding(min, max *int, defMin, defMax int) (int, int) {
+	paddingMin := DerefInt(min, defMin)
+	paddingMax := DerefInt(max, defMax)
+	switch {
+	case min == nil && max != nil && paddingMax < paddingMin:
+		paddingMin = paddingMax
+	case max == nil && min != nil && paddingMax < paddingMin:
+		paddingMax = paddingMin
+	}
+	return paddingMin, paddingMax
+}
+
+func NormalizeTableType(tableType string) (string, error) {
+	switch t := strings.ToLower(strings.TrimSpace(tableType)); t {
+	case "", "prefer_ascii":
+		return "prefer_ascii", nil
+	case "prefer_entropy":
+		return "prefer_entropy", nil
+	default:
+		return "", fmt.Errorf("table-type must be prefer_ascii or prefer_entropy")
 	}
 }
 

@@ -14,7 +14,39 @@ type HTTPMaskTunnelServer struct {
 	ts  *httpmask.TunnelServer
 }
 
+func newHTTPMaskEarlyCodecConfig(cfg *ProtocolConfig, psk string) EarlyCodecConfig {
+	return EarlyCodecConfig{
+		PSK:                psk,
+		AEAD:               cfg.AEADMethod,
+		EnablePureDownlink: cfg.EnablePureDownlink,
+		PaddingMin:         cfg.PaddingMin,
+		PaddingMax:         cfg.PaddingMax,
+	}
+}
+
+func newClientHTTPMaskEarlyHandshake(cfg *ProtocolConfig) (*httpmask.ClientEarlyHandshake, error) {
+	table, err := pickClientTable(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewHTTPMaskClientEarlyHandshake(
+		newHTTPMaskEarlyCodecConfig(cfg, ClientAEADSeed(cfg.Key)),
+		table,
+		kipUserHashFromKey(cfg.Key),
+		KIPFeatAll,
+	)
+}
+
 func NewHTTPMaskTunnelServer(cfg *ProtocolConfig) *HTTPMaskTunnelServer {
+	return newHTTPMaskTunnelServer(cfg, false)
+}
+
+func NewHTTPMaskTunnelServerWithFallback(cfg *ProtocolConfig) *HTTPMaskTunnelServer {
+	return newHTTPMaskTunnelServer(cfg, true)
+}
+
+func newHTTPMaskTunnelServer(cfg *ProtocolConfig, passThroughOnReject bool) *HTTPMaskTunnelServer {
 	if cfg == nil {
 		return &HTTPMaskTunnelServer{}
 	}
@@ -22,8 +54,19 @@ func NewHTTPMaskTunnelServer(cfg *ProtocolConfig) *HTTPMaskTunnelServer {
 	var ts *httpmask.TunnelServer
 	if !cfg.DisableHTTPMask {
 		switch strings.ToLower(strings.TrimSpace(cfg.HTTPMaskMode)) {
-		case "stream", "poll", "auto":
-			ts = httpmask.NewTunnelServer(httpmask.TunnelServerOptions{Mode: cfg.HTTPMaskMode})
+		case "stream", "poll", "auto", "ws":
+			ts = httpmask.NewTunnelServer(httpmask.TunnelServerOptions{
+				Mode:     cfg.HTTPMaskMode,
+				PathRoot: cfg.HTTPMaskPathRoot,
+				AuthKey:  ServerAEADSeed(cfg.Key),
+				EarlyHandshake: NewHTTPMaskServerEarlyHandshake(
+					newHTTPMaskEarlyCodecConfig(cfg, ServerAEADSeed(cfg.Key)),
+					cfg.tableCandidates(),
+					globalHandshakeReplay.allow,
+				),
+				// When upstream fallback is enabled, preserve rejected HTTP requests for the caller.
+				PassThroughOnReject: passThroughOnReject,
+			})
 		}
 	}
 	return &HTTPMaskTunnelServer{cfg: cfg, ts: ts}
@@ -58,6 +101,14 @@ func (s *HTTPMaskTunnelServer) WrapConn(rawConn net.Conn) (handshakeConn net.Con
 	case httpmask.HandleStartTunnel:
 		inner := *s.cfg
 		inner.DisableHTTPMask = true
+		// HTTPMask tunnel modes (stream/poll/auto/ws) add extra round trips before the first
+		// handshake bytes can reach ServerHandshake, especially under high concurrency.
+		// Bump the handshake timeout for tunneled conns to avoid flaky timeouts while keeping
+		// the default strict for raw TCP handshakes.
+		const minTunneledHandshakeTimeoutSeconds = 15
+		if inner.HandshakeTimeoutSeconds <= 0 || inner.HandshakeTimeoutSeconds < minTunneledHandshakeTimeoutSeconds {
+			inner.HandshakeTimeoutSeconds = minTunneledHandshakeTimeoutSeconds
+		}
 		return c, &inner, false, nil
 	default:
 		return nil, nil, true, nil
@@ -66,8 +117,8 @@ func (s *HTTPMaskTunnelServer) WrapConn(rawConn net.Conn) (handshakeConn net.Con
 
 type TunnelDialer func(ctx context.Context, network, addr string) (net.Conn, error)
 
-// DialHTTPMaskTunnel dials a CDN-capable HTTP tunnel (stream/poll/auto) and returns a stream carrying raw Sudoku bytes.
-func DialHTTPMaskTunnel(ctx context.Context, serverAddress string, cfg *ProtocolConfig, dial TunnelDialer) (net.Conn, error) {
+// DialHTTPMaskTunnel dials a CDN-capable HTTP tunnel (stream/poll/auto/ws) and returns a stream carrying raw Sudoku bytes.
+func DialHTTPMaskTunnel(ctx context.Context, serverAddress string, cfg *ProtocolConfig, dial TunnelDialer, upgrade func(net.Conn) (net.Conn, error)) (net.Conn, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("config is required")
 	}
@@ -75,14 +126,29 @@ func DialHTTPMaskTunnel(ctx context.Context, serverAddress string, cfg *Protocol
 		return nil, fmt.Errorf("http mask is disabled")
 	}
 	switch strings.ToLower(strings.TrimSpace(cfg.HTTPMaskMode)) {
-	case "stream", "poll", "auto":
+	case "stream", "poll", "auto", "ws":
 	default:
 		return nil, fmt.Errorf("http-mask-mode=%q does not use http tunnel", cfg.HTTPMaskMode)
 	}
+	var (
+		earlyHandshake *httpmask.ClientEarlyHandshake
+		err            error
+	)
+	if upgrade != nil {
+		earlyHandshake, err = newClientHTTPMaskEarlyHandshake(cfg)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return httpmask.DialTunnel(ctx, serverAddress, httpmask.TunnelDialOptions{
-		Mode:         cfg.HTTPMaskMode,
-		TLSEnabled:   cfg.HTTPMaskTLSEnabled,
-		HostOverride: cfg.HTTPMaskHost,
-		DialContext:  dial,
+		Mode:           cfg.HTTPMaskMode,
+		TLSEnabled:     cfg.HTTPMaskTLSEnabled,
+		HostOverride:   cfg.HTTPMaskHost,
+		PathRoot:       cfg.HTTPMaskPathRoot,
+		AuthKey:        ClientAEADSeed(cfg.Key),
+		EarlyHandshake: earlyHandshake,
+		Upgrade:        upgrade,
+		Multiplex:      cfg.HTTPMaskMultiplex,
+		DialContext:    dial,
 	})
 }
