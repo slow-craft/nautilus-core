@@ -54,7 +54,6 @@ func (m *mockProxyAdapter) Close() error {
 	return nil
 }
 
-
 func newTestMultiProtocol(name string, proxies []ProxyAdapter, opts ...func(*MultiProtocol)) *MultiProtocol {
 	protocols := make([]*protocolState, len(proxies))
 	hasUDP := false
