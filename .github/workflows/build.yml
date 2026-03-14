@@ -309,7 +309,7 @@ jobs:
       shell: bash
 
     - name: Archive production artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: "${{ matrix.jobs.goos }}-${{ matrix.jobs.output }}"
         path: |
@@ -328,7 +328,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Download all workflow run artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         path: bin/
         merge-multiple: true
@@ -386,7 +386,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Download all workflow run artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         path: bin/
         merge-multiple: true
@@ -463,7 +463,7 @@ jobs:
             bash ./genReleaseNote.sh -v ${PREVERSION}...${CURRENTVERSION}
             rm ./genReleaseNote.sh
   
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           path: bin/
           merge-multiple: true
