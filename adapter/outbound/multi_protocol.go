@@ -123,6 +123,14 @@ func NewMultiProtocol(option MultiProtocolOption) (*MultiProtocol, error) {
 		ctx:               ctx,
 		cancel:            cancel,
 	}
+
+	log.Infoln("[MultiProtocol] %s: initialized with %d protocols, maxFailures=%d, dialTimeout=%ds, probeRate=%.2f, recoveryThreshold=%d",
+		option.Name, len(protocols), maxFailures, dialTimeout, probeRate, recoveryThreshold)
+	for i, p := range protocols {
+		log.Debugln("[MultiProtocol] %s: protocol[%d] = %s (%s), udp=%v",
+			option.Name, i, p.proxy.Name(), p.proxy.Type().String(), p.proxy.SupportUDP())
+	}
+
 	return mp, nil
 }
 
@@ -135,9 +143,12 @@ func (m *MultiProtocol) DialContext(ctx context.Context, metadata *C.Metadata) (
 		i := (startIdx + j) % n
 		p := m.protocols[i]
 		if !p.alive.Load() {
+			log.Debugln("[MultiProtocol] %s: TCP skip dead protocol[%d] %s", m.Name(), i, p.proxy.Name())
 			continue
 		}
 
+		log.Debugln("[MultiProtocol] %s: TCP trying protocol[%d] %s for %s:%d",
+			m.Name(), i, p.proxy.Name(), metadata.String(), metadata.DstPort)
 		dialCtx, cancel := context.WithTimeout(ctx, m.dialTimeout)
 		conn, err := p.proxy.DialContext(dialCtx, metadata)
 		cancel()
@@ -147,6 +158,7 @@ func (m *MultiProtocol) DialContext(ctx context.Context, metadata *C.Metadata) (
 			if int32(i) < m.activeIndex.Load() {
 				m.activeIndex.Store(int32(i))
 			}
+			log.Debugln("[MultiProtocol] %s: TCP connected via protocol[%d] %s", m.Name(), i, p.proxy.Name())
 			if i != 0 {
 				m.triggerShadowDial(false)
 			}
@@ -155,6 +167,8 @@ func (m *MultiProtocol) DialContext(ctx context.Context, metadata *C.Metadata) (
 
 		lastErr = err
 		newFails := p.failCount.Add(1)
+		log.Debugln("[MultiProtocol] %s: TCP protocol[%d] %s dial failed (%d/%d): %v",
+			m.Name(), i, p.proxy.Name(), newFails, m.maxFailures, err)
 		if newFails >= m.maxFailures {
 			p.alive.Store(false)
 			log.Warnln("[MultiProtocol] %s: protocol %s marked unavailable after %d failures",
@@ -182,10 +196,17 @@ func (m *MultiProtocol) ListenPacketContext(ctx context.Context, metadata *C.Met
 	for j := 0; j < n; j++ {
 		i := (startIdx + j) % n
 		p := m.protocols[i]
-		if !p.alive.Load() || !p.proxy.SupportUDP() {
+		if !p.alive.Load() {
+			log.Debugln("[MultiProtocol] %s: UDP skip dead protocol[%d] %s", m.Name(), i, p.proxy.Name())
+			continue
+		}
+		if !p.proxy.SupportUDP() {
+			log.Debugln("[MultiProtocol] %s: UDP skip non-UDP protocol[%d] %s", m.Name(), i, p.proxy.Name())
 			continue
 		}
 
+		log.Debugln("[MultiProtocol] %s: UDP trying protocol[%d] %s for %s:%d",
+			m.Name(), i, p.proxy.Name(), metadata.String(), metadata.DstPort)
 		dialCtx, cancel := context.WithTimeout(ctx, m.dialTimeout)
 		pc, err := p.proxy.ListenPacketContext(dialCtx, metadata)
 		cancel()
@@ -195,6 +216,7 @@ func (m *MultiProtocol) ListenPacketContext(ctx context.Context, metadata *C.Met
 			if int32(i) < m.activeIndex.Load() {
 				m.activeIndex.Store(int32(i))
 			}
+			log.Debugln("[MultiProtocol] %s: UDP connected via protocol[%d] %s", m.Name(), i, p.proxy.Name())
 			if i != 0 {
 				m.triggerShadowDial(true)
 			}
@@ -203,6 +225,8 @@ func (m *MultiProtocol) ListenPacketContext(ctx context.Context, metadata *C.Met
 
 		lastErr = err
 		newFails := p.failCount.Add(1)
+		log.Debugln("[MultiProtocol] %s: UDP protocol[%d] %s listen failed (%d/%d): %v",
+			m.Name(), i, p.proxy.Name(), newFails, m.maxFailures, err)
 		if newFails >= m.maxFailures {
 			p.alive.Store(false)
 			log.Warnln("[MultiProtocol] %s: protocol %s marked unavailable after %d failures",
@@ -291,7 +315,11 @@ func (m *MultiProtocol) Close() error {
 func (m *MultiProtocol) updateActiveIndex() {
 	for i, p := range m.protocols {
 		if p.alive.Load() {
-			m.activeIndex.Store(int32(i))
+			old := m.activeIndex.Swap(int32(i))
+			if old != int32(i) {
+				log.Infoln("[MultiProtocol] %s: active protocol switched from [%d] to [%d] %s",
+					m.Name(), old, i, p.proxy.Name())
+			}
 			return
 		}
 	}
@@ -304,10 +332,11 @@ func (m *MultiProtocol) resetAllIfAllDead() {
 			return
 		}
 	}
-	log.Warnln("[MultiProtocol] %s: all protocols dead, resetting", m.Name())
-	for _, p := range m.protocols {
+	log.Warnln("[MultiProtocol] %s: all protocols dead, resetting all to alive", m.Name())
+	for i, p := range m.protocols {
 		p.alive.Store(true)
 		p.failCount.Store(0)
+		log.Debugln("[MultiProtocol] %s: reset protocol[%d] %s to alive", m.Name(), i, p.proxy.Name())
 	}
 	m.activeIndex.Store(0)
 }
@@ -332,6 +361,11 @@ func (m *MultiProtocol) triggerShadowDial(udp bool) {
 		return
 	}
 
+	network := "TCP"
+	if udp {
+		network = "UDP"
+	}
+
 	for i := 0; i < activeIdx; i++ {
 		p := m.protocols[i]
 		if p.alive.Load() || p.probing.Load() {
@@ -343,12 +377,17 @@ func (m *MultiProtocol) triggerShadowDial(udp bool) {
 
 		rate := m.adaptiveRate(p)
 		if rand.Float64() > rate {
+			log.Debugln("[MultiProtocol] %s: shadow dial skipped for protocol[%d] %s (rate=%.4f)",
+				m.Name(), i, p.proxy.Name(), rate)
 			continue
 		}
 
 		if !p.probing.CompareAndSwap(false, true) {
 			continue
 		}
+
+		log.Debugln("[MultiProtocol] %s: shadow dial %s started for protocol[%d] %s (rate=%.4f)",
+			m.Name(), network, i, p.proxy.Name(), rate)
 
 		go func(idx int, ps *protocolState) {
 			defer ps.probing.Store(false)
@@ -375,6 +414,8 @@ func (m *MultiProtocol) triggerShadowDial(udp bool) {
 
 			if err == nil {
 				newCount := ps.recoveryCount.Add(1)
+				log.Debugln("[MultiProtocol] %s: shadow dial %s succeeded for protocol[%d] %s (recovery %d/%d)",
+					m.Name(), network, idx, ps.proxy.Name(), newCount, m.recoveryThreshold)
 				if newCount >= m.recoveryThreshold {
 					ps.alive.Store(true)
 					ps.failCount.Store(0)
@@ -386,7 +427,9 @@ func (m *MultiProtocol) triggerShadowDial(udp bool) {
 				}
 			} else {
 				ps.recoveryCount.Store(0)
-				ps.shadowFails.Add(1)
+				newShadowFails := ps.shadowFails.Add(1)
+				log.Debugln("[MultiProtocol] %s: shadow dial %s failed for protocol[%d] %s (shadowFails=%d): %v",
+					m.Name(), network, idx, ps.proxy.Name(), newShadowFails, err)
 			}
 		}(i, p)
 	}
@@ -432,6 +475,7 @@ func parseProtocolProxy(decoder *structure.Decoder, mapping map[string]any, basi
 	}
 
 	if !allowedMultiProtocolTypes[proxyType] {
+		log.Warnln("[MultiProtocol] protocol type %q rejected: not in allowed types (L3 protocols like wireguard/masque are not supported)", proxyType)
 		return nil, fmt.Errorf("protocol type %q is not allowed in multi-protocol (L3 protocols like wireguard/masque are not supported)", proxyType)
 	}
 
