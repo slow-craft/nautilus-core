@@ -80,6 +80,8 @@ func newTestMultiProtocol(name string, proxies []ProxyAdapter, opts ...func(*Mul
 		probeRate:         0.1,
 		minProbeRate:      0.02,
 		recoveryThreshold: 2,
+		cooldownBase:      10 * time.Second,
+		cooldownMax:       5 * time.Minute,
 		ctx:               ctx,
 		cancel:            cancel,
 	}
@@ -234,6 +236,8 @@ func TestMultiProtocol_ResetAllOnAllDead(t *testing.T) {
 
 	mp := newTestMultiProtocol("test", []ProxyAdapter{p1, p2}, func(m *MultiProtocol) {
 		m.maxFailures = 1
+		m.cooldownBase = 10 * time.Second
+		m.cooldownMax = 5 * time.Minute
 	})
 
 	_, err := mp.DialContext(context.Background(), newTestMetadata())
@@ -241,17 +245,12 @@ func TestMultiProtocol_ResetAllOnAllDead(t *testing.T) {
 		t.Fatal("expected error when all protocols fail")
 	}
 
-	// After all dead, resetAllIfAllDead should have been called
-	for i, p := range mp.protocols {
-		if !p.alive.Load() {
-			t.Fatalf("protocol[%d] should be alive after reset", i)
-		}
-		if p.failCount.Load() != 0 {
-			t.Fatalf("protocol[%d] failCount should be 0 after reset", i)
-		}
+	// After all dead, should enter cooldown instead of immediate reset
+	if mp.cooldownUntil.Load() == 0 {
+		t.Fatal("expected cooldown to be active after all protocols dead")
 	}
-	if mp.activeIndex.Load() != 0 {
-		t.Fatal("activeIndex should be 0 after reset")
+	if mp.cooldownCount.Load() != 1 {
+		t.Fatalf("expected cooldownCount=1, got %d", mp.cooldownCount.Load())
 	}
 }
 
@@ -635,9 +634,8 @@ func TestMultiProtocol_Bug4_SupportUDPWhenAllUDPDead(t *testing.T) {
 func TestMultiProtocol_Bug5_ResetAllIfAllDeadRace(t *testing.T) {
 	// Bug 5: resetAllIfAllDead has no synchronization. Multiple concurrent
 	// DialContext calls can all detect "all dead" and call resetAllIfAllDead
-	// concurrently. While the reset itself is idempotent, the check-then-act
-	// (check all dead → reset) is not atomic, so there's a window where
-	// some goroutines see partially-reset state.
+	// concurrently. With cooldown, concurrent calls should safely enter
+	// cooldown state without data races.
 	//
 	// Run with -race to detect any data races.
 
@@ -668,15 +666,12 @@ func TestMultiProtocol_Bug5_ResetAllIfAllDeadRace(t *testing.T) {
 		<-done
 	}
 
-	// After all goroutines finish, state should be consistent:
-	// all protocols alive, activeIndex=0
-	for i, p := range mp.protocols {
-		if !p.alive.Load() {
-			t.Fatalf("protocol[%d] should be alive after reset", i)
-		}
+	// After all goroutines finish, cooldown should be active
+	if mp.cooldownUntil.Load() == 0 {
+		t.Fatal("expected cooldown to be active after concurrent all-dead failures")
 	}
-	if mp.activeIndex.Load() != 0 {
-		t.Fatalf("activeIndex should be 0, got %d", mp.activeIndex.Load())
+	if mp.cooldownCount.Load() == 0 {
+		t.Fatal("expected cooldownCount > 0")
 	}
 }
 
@@ -883,5 +878,244 @@ func TestMultiProtocol_Bug10_WrapAroundDoesNotUpdateActiveIndex(t *testing.T) {
 	// activeIndex should now be updated to 0 (the protocol that succeeded)
 	if idx := mp.activeIndex.Load(); idx != 0 {
 		t.Fatalf("BUG: activeIndex should be 0 after wrap-around found protocol[0] works, got %d", idx)
+	}
+}
+
+// --- cooldown mechanism tests ---
+
+func TestMultiProtocol_CooldownEnterAndProbe(t *testing.T) {
+	// When all protocols fail, system enters cooldown. During cooldown,
+	// each request probes only one protocol (round-robin).
+	probeCount := atomic.Int32{}
+
+	p0 := newMockProxy("proto0", "1.1.1.1:443", false)
+	p0.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		probeCount.Add(1)
+		return nil, errors.New("fail")
+	}
+	p1 := newMockProxy("proto1", "2.2.2.2:443", false)
+	p1.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		probeCount.Add(1)
+		return nil, errors.New("fail")
+	}
+
+	mp := newTestMultiProtocol("test", []ProxyAdapter{p0, p1}, func(m *MultiProtocol) {
+		m.maxFailures = 1
+		m.cooldownBase = 1 * time.Hour // long cooldown so it doesn't expire during test
+	})
+
+	// First dial: all fail → enter cooldown
+	_, err := mp.DialContext(context.Background(), newTestMetadata())
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if mp.cooldownUntil.Load() == 0 {
+		t.Fatal("expected cooldown active")
+	}
+
+	// Reset probe count — we only care about cooldown probes
+	probeCount.Store(0)
+
+	// Next 4 dials should each probe exactly 1 protocol
+	for i := 0; i < 4; i++ {
+		_, _ = mp.DialContext(context.Background(), newTestMetadata())
+	}
+
+	// 4 requests = 4 probes (one per request), round-robin across 2 protocols
+	if got := probeCount.Load(); got != 4 {
+		t.Fatalf("expected 4 cooldown probes, got %d", got)
+	}
+}
+
+func TestMultiProtocol_CooldownProbeSuccess(t *testing.T) {
+	// During cooldown, if a probe succeeds, cooldown is exited and
+	// normal operation resumes.
+	callCount := 0
+
+	p0 := newMockProxy("proto0", "1.1.1.1:443", false)
+	p0.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		callCount++
+		if callCount <= 2 {
+			return nil, errors.New("fail")
+		}
+		// Recover on 3rd call
+		c1, c2 := net.Pipe()
+		_ = c2.Close()
+		return NewConn(c1, p0), nil
+	}
+	p1 := newMockProxy("proto1", "2.2.2.2:443", false)
+	p1.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		return nil, errors.New("fail")
+	}
+
+	mp := newTestMultiProtocol("test", []ProxyAdapter{p0, p1}, func(m *MultiProtocol) {
+		m.maxFailures = 1
+		m.cooldownBase = 1 * time.Hour
+	})
+
+	// All fail → enter cooldown
+	_, err := mp.DialContext(context.Background(), newTestMetadata())
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if mp.cooldownUntil.Load() == 0 {
+		t.Fatal("expected cooldown active")
+	}
+
+	// Probe: round-robin, first hits p0 (callCount=2, fails)
+	_, err = mp.DialContext(context.Background(), newTestMetadata())
+	if err == nil {
+		t.Fatal("expected probe to fail")
+	}
+
+	// Probe: hits p1 (fails)
+	_, err = mp.DialContext(context.Background(), newTestMetadata())
+	if err == nil {
+		t.Fatal("expected probe to fail")
+	}
+
+	// Probe: hits p0 again (callCount=3, succeeds!)
+	conn, err := mp.DialContext(context.Background(), newTestMetadata())
+	if err != nil {
+		t.Fatalf("expected probe to succeed, got %v", err)
+	}
+	_ = conn.Close()
+
+	// Cooldown should be exited
+	if mp.cooldownUntil.Load() != 0 {
+		t.Fatal("expected cooldown to be cleared after successful probe")
+	}
+	if mp.cooldownCount.Load() != 0 {
+		t.Fatal("expected cooldownCount reset to 0 after successful probe")
+	}
+
+	// All protocols should be alive again
+	for i, p := range mp.protocols {
+		if !p.alive.Load() {
+			t.Fatalf("protocol[%d] should be alive after cooldown exit", i)
+		}
+	}
+}
+
+func TestMultiProtocol_CooldownExponentialBackoff(t *testing.T) {
+	p0 := newMockProxy("proto0", "1.1.1.1:443", false)
+	p0.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		return nil, errors.New("fail")
+	}
+
+	mp := newTestMultiProtocol("test", []ProxyAdapter{p0}, func(m *MultiProtocol) {
+		m.maxFailures = 1
+		m.cooldownBase = 10 * time.Second
+		m.cooldownMax = 5 * time.Minute
+	})
+
+	// Each cycle: all fail → enter cooldown → force expire → repeat
+	expectedDurations := []time.Duration{
+		10 * time.Second,  // 10 * 2^0
+		20 * time.Second,  // 10 * 2^1
+		40 * time.Second,  // 10 * 2^2
+		80 * time.Second,  // 10 * 2^3
+		160 * time.Second, // 10 * 2^4
+		300 * time.Second, // capped at cooldownMax (5min)
+		300 * time.Second, // stays capped
+	}
+
+	for i, expected := range expectedDurations {
+		// Clear cooldown to simulate expiry (without resetting count)
+		mp.cooldownUntil.Store(0)
+		// Reset all protocols alive for the next cycle
+		for _, p := range mp.protocols {
+			p.alive.Store(true)
+			p.failCount.Store(0)
+		}
+
+		now := time.Now()
+		_, _ = mp.DialContext(context.Background(), newTestMetadata())
+
+		deadline := time.Unix(0, mp.cooldownUntil.Load())
+		actual := deadline.Sub(now)
+
+		// Allow 1 second tolerance
+		if actual < expected-time.Second || actual > expected+time.Second {
+			t.Fatalf("attempt %d: expected cooldown ~%v, got %v", i+1, expected, actual)
+		}
+	}
+}
+
+func TestMultiProtocol_CooldownExpiry(t *testing.T) {
+	// When cooldown expires naturally, all protocols are reset alive
+	// but cooldownCount is preserved for continued backoff.
+	callCount := 0
+
+	p0 := newMockProxy("proto0", "1.1.1.1:443", false)
+	p0.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		callCount++
+		return nil, errors.New("fail")
+	}
+
+	mp := newTestMultiProtocol("test", []ProxyAdapter{p0}, func(m *MultiProtocol) {
+		m.maxFailures = 1
+		m.cooldownBase = 10 * time.Second
+		m.cooldownMax = 5 * time.Minute
+	})
+
+	// All fail → enter cooldown (count=1)
+	_, _ = mp.DialContext(context.Background(), newTestMetadata())
+	if mp.cooldownCount.Load() != 1 {
+		t.Fatalf("expected cooldownCount=1, got %d", mp.cooldownCount.Load())
+	}
+
+	// Simulate cooldown expiry by setting deadline to past
+	mp.cooldownUntil.Store(time.Now().Add(-1 * time.Second).UnixNano())
+
+	// Next dial: cooldown expired → exitCooldown(false) → protocols reset alive
+	// → normal flow → all fail again → enter cooldown (count=2)
+	_, _ = mp.DialContext(context.Background(), newTestMetadata())
+
+	if mp.cooldownCount.Load() != 2 {
+		t.Fatalf("expected cooldownCount=2 after expiry+re-fail, got %d", mp.cooldownCount.Load())
+	}
+}
+
+func TestMultiProtocol_CooldownUDPProbeSkipsNonUDP(t *testing.T) {
+	// During cooldown, UDP probe should skip non-UDP protocols.
+	p0 := newMockProxy("proto0", "1.1.1.1:443", false) // no UDP
+	p1 := newMockProxy("proto1", "2.2.2.2:443", true)  // has UDP
+	p1Called := false
+	p1.listenFunc = func(ctx context.Context, metadata *C.Metadata) (C.PacketConn, error) {
+		p1Called = true
+		pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+		if err != nil {
+			return nil, err
+		}
+		return newPacketConn(pc, p1), nil
+	}
+
+	mp := newTestMultiProtocol("test", []ProxyAdapter{p0, p1}, func(m *MultiProtocol) {
+		m.maxFailures = 1
+		m.cooldownBase = 1 * time.Hour
+	})
+
+	// Force cooldown state
+	mp.cooldownUntil.Store(time.Now().Add(1 * time.Hour).UnixNano())
+	mp.cooldownCount.Store(1)
+	for _, p := range mp.protocols {
+		p.alive.Store(false)
+	}
+
+	meta := &C.Metadata{NetWork: C.UDP, DstPort: 53, Host: "dns.example.com"}
+	pc, err := mp.ListenPacketContext(context.Background(), meta)
+	if err != nil {
+		t.Fatalf("expected UDP probe to succeed via p1, got %v", err)
+	}
+	_ = pc.Close()
+
+	if !p1Called {
+		t.Fatal("expected p1 (UDP-capable) to be probed, not p0")
+	}
+
+	// Cooldown should be exited
+	if mp.cooldownUntil.Load() != 0 {
+		t.Fatal("expected cooldown cleared after successful UDP probe")
 	}
 }

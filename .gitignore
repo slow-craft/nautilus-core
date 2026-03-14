@@ -38,3 +38,5 @@ justfile
 mihomo-test
 test.yaml
 backup/
+
+docs/plans/

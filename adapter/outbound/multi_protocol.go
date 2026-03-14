@@ -21,6 +21,8 @@ const (
 	defaultProbeRate         = 0.1
 	defaultMinProbeRate      = 0.02
 	defaultRecoveryThreshold = 2
+	defaultCooldownBase      = 10
+	defaultCooldownMax       = 300
 )
 
 type MultiProtocolOption struct {
@@ -32,6 +34,8 @@ type MultiProtocolOption struct {
 	ProbeRate         float64          `proxy:"probe-rate,omitempty"`
 	MinProbeRate      float64          `proxy:"min-probe-rate,omitempty"`
 	RecoveryThreshold int              `proxy:"recovery-threshold,omitempty"`
+	CooldownBase      int              `proxy:"cooldown-base,omitempty"`
+	CooldownMax       int              `proxy:"cooldown-max,omitempty"`
 }
 
 type protocolState struct {
@@ -52,6 +56,11 @@ type MultiProtocol struct {
 	probeRate         float64
 	minProbeRate      float64
 	recoveryThreshold int32
+	cooldownBase      time.Duration
+	cooldownMax       time.Duration
+	cooldownUntil     atomic.Int64
+	cooldownProbe     atomic.Int32
+	cooldownCount     atomic.Int32
 	cancel            context.CancelFunc
 	ctx               context.Context
 }
@@ -80,6 +89,14 @@ func NewMultiProtocol(option MultiProtocolOption) (*MultiProtocol, error) {
 	recoveryThreshold := option.RecoveryThreshold
 	if recoveryThreshold <= 0 {
 		recoveryThreshold = defaultRecoveryThreshold
+	}
+	cooldownBase := option.CooldownBase
+	if cooldownBase <= 0 {
+		cooldownBase = defaultCooldownBase
+	}
+	cooldownMax := option.CooldownMax
+	if cooldownMax <= 0 {
+		cooldownMax = defaultCooldownMax
 	}
 
 	decoder := structure.NewDecoder(structure.Option{
@@ -120,6 +137,8 @@ func NewMultiProtocol(option MultiProtocolOption) (*MultiProtocol, error) {
 		probeRate:         probeRate,
 		minProbeRate:      minProbeRate,
 		recoveryThreshold: int32(recoveryThreshold),
+		cooldownBase:      time.Duration(cooldownBase) * time.Second,
+		cooldownMax:       time.Duration(cooldownMax) * time.Second,
 		ctx:               ctx,
 		cancel:            cancel,
 	}
@@ -135,6 +154,13 @@ func NewMultiProtocol(option MultiProtocolOption) (*MultiProtocol, error) {
 }
 
 func (m *MultiProtocol) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+	if deadline := m.cooldownUntil.Load(); deadline > 0 {
+		if time.Now().UnixNano() < deadline {
+			return m.dialCooldownProbe(ctx, metadata)
+		}
+		m.exitCooldown(false)
+	}
+
 	var lastErr error
 	startIdx := int(m.activeIndex.Load())
 	n := len(m.protocols)
@@ -189,6 +215,13 @@ func (m *MultiProtocol) DialContext(ctx context.Context, metadata *C.Metadata) (
 }
 
 func (m *MultiProtocol) ListenPacketContext(ctx context.Context, metadata *C.Metadata) (C.PacketConn, error) {
+	if deadline := m.cooldownUntil.Load(); deadline > 0 {
+		if time.Now().UnixNano() < deadline {
+			return m.listenPacketCooldownProbe(ctx, metadata)
+		}
+		m.exitCooldown(false)
+	}
+
 	var lastErr error
 	startIdx := int(m.activeIndex.Load())
 	n := len(m.protocols)
@@ -332,13 +365,91 @@ func (m *MultiProtocol) resetAllIfAllDead() {
 			return
 		}
 	}
-	log.Warnln("[MultiProtocol] %s: all protocols dead, resetting all to alive", m.Name())
+	count := m.cooldownCount.Add(1)
+	shift := count - 1
+	if shift > 5 {
+		shift = 5
+	}
+	backoff := m.cooldownBase * time.Duration(int64(1)<<shift)
+	if backoff > m.cooldownMax {
+		backoff = m.cooldownMax
+	}
+	deadline := time.Now().Add(backoff)
+	m.cooldownUntil.Store(deadline.UnixNano())
+	log.Warnln("[MultiProtocol] %s: all protocols dead, entering cooldown for %v (attempt %d)",
+		m.Name(), backoff, count)
+}
+
+func (m *MultiProtocol) exitCooldown(resetCount bool) {
+	m.cooldownUntil.Store(0)
+	m.cooldownProbe.Store(0)
+	if resetCount {
+		m.cooldownCount.Store(0)
+	}
 	for i, p := range m.protocols {
 		p.alive.Store(true)
 		p.failCount.Store(0)
-		log.Debugln("[MultiProtocol] %s: reset protocol[%d] %s to alive", m.Name(), i, p.proxy.Name())
+		log.Debugln("[MultiProtocol] %s: cooldown exit, reset protocol[%d] %s to alive", m.Name(), i, p.proxy.Name())
 	}
 	m.activeIndex.Store(0)
+}
+
+func (m *MultiProtocol) dialCooldownProbe(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+	n := len(m.protocols)
+	idx := int(m.cooldownProbe.Add(1)-1) % n
+	p := m.protocols[idx]
+
+	log.Debugln("[MultiProtocol] %s: cooldown TCP probe protocol[%d] %s", m.Name(), idx, p.proxy.Name())
+	dialCtx, cancel := context.WithTimeout(ctx, m.dialTimeout)
+	conn, err := p.proxy.DialContext(dialCtx, metadata)
+	cancel()
+
+	if err != nil {
+		return nil, fmt.Errorf("multi-protocol %s: cooldown probe protocol[%d] %s failed: %w",
+			m.Name(), idx, p.proxy.Name(), err)
+	}
+
+	p.alive.Store(true)
+	p.failCount.Store(0)
+	m.activeIndex.Store(int32(idx))
+	m.exitCooldown(true)
+	log.Infoln("[MultiProtocol] %s: protocol[%d] %s recovered during cooldown, resuming normal operation",
+		m.Name(), idx, p.proxy.Name())
+	return conn, nil
+}
+
+func (m *MultiProtocol) listenPacketCooldownProbe(ctx context.Context, metadata *C.Metadata) (C.PacketConn, error) {
+	n := len(m.protocols)
+	start := int(m.cooldownProbe.Add(1) - 1)
+
+	// round-robin but skip non-UDP protocols
+	for j := 0; j < n; j++ {
+		idx := (start + j) % n
+		p := m.protocols[idx]
+		if !p.proxy.SupportUDP() {
+			continue
+		}
+
+		log.Debugln("[MultiProtocol] %s: cooldown UDP probe protocol[%d] %s", m.Name(), idx, p.proxy.Name())
+		dialCtx, cancel := context.WithTimeout(ctx, m.dialTimeout)
+		pc, err := p.proxy.ListenPacketContext(dialCtx, metadata)
+		cancel()
+
+		if err != nil {
+			return nil, fmt.Errorf("multi-protocol %s: cooldown probe protocol[%d] %s failed: %w",
+				m.Name(), idx, p.proxy.Name(), err)
+		}
+
+		p.alive.Store(true)
+		p.failCount.Store(0)
+		m.activeIndex.Store(int32(idx))
+		m.exitCooldown(true)
+		log.Infoln("[MultiProtocol] %s: protocol[%d] %s recovered during cooldown (UDP), resuming normal operation",
+			m.Name(), idx, p.proxy.Name())
+		return pc, nil
+	}
+
+	return nil, fmt.Errorf("multi-protocol %s: cooldown, no UDP-capable protocol to probe", m.Name())
 }
 
 func newProbeMetadata(udp bool) *C.Metadata {
