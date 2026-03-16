@@ -186,7 +186,7 @@ func (m *MultiProtocol) DialContext(ctx context.Context, metadata *C.Metadata) (
 			}
 			log.Debugln("[MultiProtocol] %s: TCP connected via protocol[%d] %s", m.Name(), i, p.proxy.Name())
 			if i != 0 {
-				m.triggerShadowDial(false)
+				m.triggerShadowDial(i, false)
 			}
 			return conn, nil
 		}
@@ -251,7 +251,7 @@ func (m *MultiProtocol) ListenPacketContext(ctx context.Context, metadata *C.Met
 			}
 			log.Debugln("[MultiProtocol] %s: UDP connected via protocol[%d] %s", m.Name(), i, p.proxy.Name())
 			if i != 0 {
-				m.triggerShadowDial(true)
+				m.triggerShadowDial(i, true)
 			}
 			return pc, nil
 		}
@@ -466,9 +466,8 @@ func newProbeMetadata(udp bool) *C.Metadata {
 	return meta
 }
 
-func (m *MultiProtocol) triggerShadowDial(udp bool) {
-	activeIdx := int(m.activeIndex.Load())
-	if activeIdx == 0 {
+func (m *MultiProtocol) triggerShadowDial(connectedIdx int, udp bool) {
+	if connectedIdx == 0 {
 		return
 	}
 
@@ -477,7 +476,7 @@ func (m *MultiProtocol) triggerShadowDial(udp bool) {
 		network = "UDP"
 	}
 
-	for i := 0; i < activeIdx; i++ {
+	for i := 0; i < connectedIdx; i++ {
 		p := m.protocols[i]
 		if p.alive.Load() || p.probing.Load() {
 			continue

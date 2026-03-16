@@ -881,6 +881,61 @@ func TestMultiProtocol_Bug10_WrapAroundDoesNotUpdateActiveIndex(t *testing.T) {
 	}
 }
 
+func TestMultiProtocol_Bug_ShadowDialNeverFiresWhenActiveIndexZero(t *testing.T) {
+	// BUG: When activeIndex=0 but protocol[0] is dead, triggerShadowDial
+	// checked activeIndex==0 and returned immediately, thinking "already on
+	// highest priority". But protocol[0] is dead — the actual connected
+	// protocol is [1]. Shadow dial should probe protocol[0] for recovery.
+	//
+	// Scenario:
+	//   - protocol[0]: dead (hysteria2 unreachable)
+	//   - protocol[1]: alive (anytls working)
+	//   - activeIndex: 0 (stale, never updated upward)
+	//   - Every connection goes through protocol[1] via skip+fallback
+	//   - Shadow dial should fire to probe protocol[0], but never does
+
+	shadowProbed := atomic.Bool{}
+
+	p0 := newMockProxy("hysteria2", "1.1.1.1:443", false)
+	p0.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		// Shadow dial probe will call this
+		shadowProbed.Store(true)
+		return nil, errors.New("hysteria2 still down")
+	}
+
+	p1 := newMockProxy("anytls", "2.2.2.2:443", false)
+	p1.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		c1, c2 := net.Pipe()
+		_ = c2.Close()
+		return NewConn(c1, p1), nil
+	}
+
+	mp := newTestMultiProtocol("test-shadow-bug", []ProxyAdapter{p0, p1}, func(m *MultiProtocol) {
+		m.probeRate = 1.0    // always probe (eliminate randomness)
+		m.minProbeRate = 1.0 // always probe
+	})
+
+	// Set up the buggy state: activeIndex=0, protocol[0] dead
+	mp.protocols[0].alive.Store(false)
+	mp.activeIndex.Store(0) // stale — not updated when protocol[0] died
+
+	// Dial multiple times — each should trigger shadow dial for protocol[0]
+	for i := 0; i < 10; i++ {
+		conn, err := mp.DialContext(context.Background(), newTestMetadata())
+		if err != nil {
+			t.Fatalf("dial %d: unexpected error: %v", i, err)
+		}
+		_ = conn.Close()
+	}
+
+	// Give shadow dial goroutines time to run
+	time.Sleep(100 * time.Millisecond)
+
+	if !shadowProbed.Load() {
+		t.Fatal("BUG: shadow dial never probed dead protocol[0] — triggerShadowDial returned early because activeIndex==0")
+	}
+}
+
 // --- cooldown mechanism tests ---
 
 func TestMultiProtocol_CooldownEnterAndProbe(t *testing.T) {
