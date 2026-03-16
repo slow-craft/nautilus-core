@@ -181,7 +181,8 @@ func (m *MultiProtocol) DialContext(ctx context.Context, metadata *C.Metadata) (
 
 		if err == nil {
 			p.failCount.Store(0)
-			if int32(i) < m.activeIndex.Load() {
+			currentActive := m.activeIndex.Load()
+			if int32(i) < currentActive || !m.protocols[currentActive].alive.Load() {
 				m.activeIndex.Store(int32(i))
 			}
 			log.Debugln("[MultiProtocol] %s: TCP connected via protocol[%d] %s", m.Name(), i, p.proxy.Name())
@@ -246,7 +247,8 @@ func (m *MultiProtocol) ListenPacketContext(ctx context.Context, metadata *C.Met
 
 		if err == nil {
 			p.failCount.Store(0)
-			if int32(i) < m.activeIndex.Load() {
+			currentActive := m.activeIndex.Load()
+			if int32(i) < currentActive || !m.protocols[currentActive].alive.Load() {
 				m.activeIndex.Store(int32(i))
 			}
 			log.Debugln("[MultiProtocol] %s: UDP connected via protocol[%d] %s", m.Name(), i, p.proxy.Name())

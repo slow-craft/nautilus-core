@@ -938,6 +938,81 @@ func TestMultiProtocol_Bug_ShadowDialNeverFiresWhenActiveIndexZero(t *testing.T)
 
 // --- cooldown mechanism tests ---
 
+func TestMultiProtocol_StaleActiveIndexCausesRepeatedDeadSkip(t *testing.T) {
+	// ROOT CAUSE: When activeIndex=0 and protocol[0] is dead, dial falls
+	// through to protocol[1] and succeeds. But activeIndex is NOT updated
+	// because the update condition is `int32(i) < activeIndex` (1 < 0 = false).
+	// Result: every subsequent dial starts at 0, hits the dead protocol,
+	// logs "skip dead protocol[0]", then falls through to 1. This is the
+	// unnecessary traversal the user sees in production logs.
+
+	p0 := newMockProxy("proto0", "1.1.1.1:443", false)
+	p0.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		return nil, errors.New("fail")
+	}
+
+	p1 := newMockProxy("proto1", "2.2.2.2:443", false)
+	p1.dialFunc = func(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+		c1, c2 := net.Pipe()
+		_ = c2.Close()
+		return NewConn(c1, p1), nil
+	}
+
+	mp := newTestMultiProtocol("test", []ProxyAdapter{p0, p1}, func(m *MultiProtocol) {
+		m.maxFailures = 1
+	})
+
+	// Mark p0 dead, but activeIndex remains 0 (stale)
+	mp.protocols[0].alive.Store(false)
+
+	// Dial 1: starts at 0, skips dead p0, connects via p1
+	conn, err := mp.DialContext(context.Background(), newTestMetadata())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	_ = conn.Close()
+
+	// After connecting via p1 while p0 is dead, activeIndex should advance to 1
+	if idx := mp.activeIndex.Load(); idx != 1 {
+		t.Fatalf("activeIndex should be 1 after connecting via p1 (p0 is dead), got %d", idx)
+	}
+}
+
+func TestMultiProtocol_StaleActiveIndexCausesRepeatedDeadSkip_UDP(t *testing.T) {
+	// Same issue for UDP path.
+
+	p0 := newMockProxy("proto0", "1.1.1.1:443", true)
+	p0.listenFunc = func(ctx context.Context, metadata *C.Metadata) (C.PacketConn, error) {
+		return nil, errors.New("fail")
+	}
+
+	p1 := newMockProxy("proto1", "2.2.2.2:443", true)
+	p1.listenFunc = func(ctx context.Context, metadata *C.Metadata) (C.PacketConn, error) {
+		pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+		if err != nil {
+			return nil, err
+		}
+		return newPacketConn(pc, p1), nil
+	}
+
+	mp := newTestMultiProtocol("test", []ProxyAdapter{p0, p1}, func(m *MultiProtocol) {
+		m.maxFailures = 1
+	})
+
+	mp.protocols[0].alive.Store(false)
+
+	meta := &C.Metadata{NetWork: C.UDP, DstPort: 53, Host: "dns.example.com"}
+	pc, err := mp.ListenPacketContext(context.Background(), meta)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	_ = pc.Close()
+
+	if idx := mp.activeIndex.Load(); idx != 1 {
+		t.Fatalf("activeIndex should be 1 after UDP connect via p1 (p0 dead), got %d", idx)
+	}
+}
+
 func TestMultiProtocol_CooldownEnterAndProbe(t *testing.T) {
 	// When all protocols fail, system enters cooldown. During cooldown,
 	// each request probes only one protocol (round-robin).
