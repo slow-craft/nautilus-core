@@ -21,6 +21,7 @@ const (
 	RejectDrop
 	Compatible
 	Pass
+	PassRule
 	Dns
 
 	Relay
@@ -48,6 +49,9 @@ const (
 	Masque
 	TrustTunnel
 	MultiProtocol
+	OpenVPN
+	Tailscale
+	GostRelay
 )
 
 const (
@@ -181,6 +185,8 @@ func (at AdapterType) String() string {
 		return "Compatible"
 	case Pass:
 		return "Pass"
+	case PassRule:
+		return "PassRule"
 	case Dns:
 		return "Dns"
 	case Shadowsocks:
@@ -221,6 +227,12 @@ func (at AdapterType) String() string {
 		return "TrustTunnel"
 	case MultiProtocol:
 		return "MultiProtocol"
+	case OpenVPN:
+		return "OpenVPN"
+	case Tailscale:
+		return "Tailscale"
+	case GostRelay:
+		return "GostRelay"
 	case Relay:
 		return "Relay"
 	case Selector:

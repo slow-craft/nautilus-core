@@ -20,6 +20,7 @@ type Snell struct {
 	pool       *snell.Pool
 	obfsOption *simpleObfsOption
 	version    int
+	reuse      bool
 }
 
 type SnellOption struct {
@@ -30,6 +31,7 @@ type SnellOption struct {
 	Psk      string         `proxy:"psk"`
 	UDP      bool           `proxy:"udp,omitempty"`
 	Version  int            `proxy:"version,omitempty"`
+	Reuse    bool           `proxy:"reuse,omitempty"`
 	ObfsOpts map[string]any `proxy:"obfs-opts,omitempty"`
 }
 
@@ -66,15 +68,20 @@ func (s *Snell) writeHeaderContext(ctx context.Context, c net.Conn, metadata *C.
 
 	if metadata.NetWork == C.UDP {
 		err = snell.WriteUDPHeader(c, s.version)
+		if err == nil && s.version >= snell.Version4 {
+			if sc, ok := c.(*snell.Snell); ok {
+				err = sc.ReadReply()
+			}
+		}
 		return
 	}
-	err = snell.WriteHeader(c, metadata.String(), uint(metadata.DstPort), s.version)
+	err = snell.WriteHeaderWithReuse(c, metadata.String(), uint(metadata.DstPort), s.version, s.reuse)
 	return
 }
 
 // DialContext implements C.ProxyAdapter
 func (s *Snell) DialContext(ctx context.Context, metadata *C.Metadata) (_ C.Conn, err error) {
-	if s.version == snell.Version2 {
+	if s.reuse {
 		c, err := s.pool.Get()
 		if err != nil {
 			return nil, err
@@ -101,8 +108,7 @@ func (s *Snell) DialContext(ctx context.Context, metadata *C.Metadata) (_ C.Conn
 }
 
 // ListenPacketContext implements C.ProxyAdapter
-func (s *Snell) ListenPacketContext(ctx context.Context, metadata *C.Metadata) (C.PacketConn, error) {
-	var err error
+func (s *Snell) ListenPacketContext(ctx context.Context, metadata *C.Metadata) (_ C.PacketConn, err error) {
 	if err = s.ResolveUDP(ctx, metadata); err != nil {
 		return nil, err
 	}
@@ -111,7 +117,14 @@ func (s *Snell) ListenPacketContext(ctx context.Context, metadata *C.Metadata) (
 		return nil, err
 	}
 
+	defer func(c net.Conn) {
+		safeConnClose(c, err)
+	}(c)
+
 	c, err = s.StreamConnContext(ctx, c, metadata)
+	if err != nil {
+		return nil, err
+	}
 
 	pc := snell.PacketConn(c)
 	return newPacketConn(pc, s), nil
@@ -150,37 +163,43 @@ func NewSnell(option SnellOption) (*Snell, error) {
 	if option.Version == 0 {
 		option.Version = snell.DefaultSnellVersion
 	}
+	if option.Version == snell.Version5 {
+		// Snell v5 servers are backward-compatible with v4 clients.
+		option.Version = snell.Version4
+	}
+	reuse := option.Version == snell.Version2 || (option.Version == snell.Version4 && option.Reuse)
 	switch option.Version {
 	case snell.Version1, snell.Version2:
 		if option.UDP {
 			return nil, fmt.Errorf("snell version %d not support UDP", option.Version)
 		}
-	case snell.Version3:
+	case snell.Version3, snell.Version4:
 	default:
 		return nil, fmt.Errorf("snell version error: %d", option.Version)
 	}
 
 	s := &Snell{
-		Base: &Base{
-			name:   option.Name,
-			addr:   addr,
-			tp:     C.Snell,
-			pdName: option.ProviderName,
-			udp:    option.UDP,
-			tfo:    option.TFO,
-			mpTcp:  option.MPTCP,
-			iface:  option.Interface,
-			rmark:  option.RoutingMark,
-			prefer: option.IPVersion,
-		},
+		Base: NewBase(BaseOption{
+			Name:         option.Name,
+			Addr:         addr,
+			Type:         C.Snell,
+			ProviderName: option.ProviderName,
+			UDP:          option.UDP,
+			TFO:          option.TFO,
+			MPTCP:        option.MPTCP,
+			Interface:    option.Interface,
+			RoutingMark:  option.RoutingMark,
+			Prefer:       option.IPVersion,
+		}),
 		option:     &option,
 		psk:        psk,
 		obfsOption: obfsOption,
 		version:    option.Version,
+		reuse:      reuse,
 	}
 	s.dialer = option.NewDialer(s.DialOptions())
 
-	if option.Version == snell.Version2 {
+	if s.reuse {
 		s.pool = snell.NewPool(func(ctx context.Context) (*snell.Snell, error) {
 			c, err := s.dialer.DialContext(ctx, "tcp", addr)
 			if err != nil {
