@@ -1,4 +1,4 @@
-NAME=mihomo
+NAME=nautilus-core
 BINDIR=bin
 BRANCH=$(shell git branch --show-current)
 
@@ -19,8 +19,8 @@ VERSION=$(BASE_VERSION)-0.$(COMMIT_TIME)-$(shell git rev-parse --short HEAD)$(DI
 endif
 
 BUILDTIME=$(shell date -u)
-GOBUILD=CGO_ENABLED=0 go build -tags with_gvisor -trimpath -ldflags '-X "github.com/metacubex/mihomo/constant.Version=$(VERSION)" \
-		-X "github.com/metacubex/mihomo/constant.BuildTime=$(BUILDTIME)" \
+GOBUILD=CGO_ENABLED=0 go build -tags with_gvisor -trimpath -ldflags '-X "github.com/slow-craft/nautilus-core/constant.Version=$(VERSION)" \
+		-X "github.com/slow-craft/nautilus-core/constant.BuildTime=$(BUILDTIME)" \
 		-w -s -buildid='
 
 PLATFORM_LIST = \

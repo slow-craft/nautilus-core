@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/metacubex/mihomo/common/httputils"
+	"github.com/slow-craft/nautilus-core/common/httputils"
 
 	"github.com/metacubex/http"
 )

@@ -1,18 +1,18 @@
 -s dir
---name mihomo
+--name nautilus-core
 --category net
 --license GPL-3.0-or-later
 --description "The universal proxy platform."
---url "https://wiki.metacubex.one/"
---maintainer "MetaCubeX <none@example.com>"
---deb-field "Bug: https://github.com/MetaCubeX/mihomo/issues"
+--url "https://github.com/slow-craft/nautilus-core"
+--maintainer "slow-craft <none@example.com>"
+--deb-field "Bug: https://github.com/slow-craft/nautilus-core/issues"
 --no-deb-generate-changes
 --config-files /etc/mihomo/config.yaml
 
 .github/release/config.yaml=/etc/mihomo/config.yaml
 
-.github/release/mihomo.service=/usr/lib/systemd/system/mihomo.service
-.github/release/mihomo@.service=/usr/lib/systemd/system/mihomo@.service
+.github/release/nautilus-core.service=/usr/lib/systemd/system/nautilus-core.service
+.github/release/nautilus-core@.service=/usr/lib/systemd/system/nautilus-core@.service
 
 
-LICENSE=/usr/share/licenses/mihomo/LICENSE
+LICENSE=/usr/share/licenses/nautilus-core/LICENSE

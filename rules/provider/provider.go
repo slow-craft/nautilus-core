@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/metacubex/mihomo/common/pool"
-	"github.com/metacubex/mihomo/common/yaml"
-	"github.com/metacubex/mihomo/component/resource"
-	C "github.com/metacubex/mihomo/constant"
-	P "github.com/metacubex/mihomo/constant/provider"
-	"github.com/metacubex/mihomo/rules/common"
+	"github.com/slow-craft/nautilus-core/common/pool"
+	"github.com/slow-craft/nautilus-core/common/yaml"
+	"github.com/slow-craft/nautilus-core/component/resource"
+	C "github.com/slow-craft/nautilus-core/constant"
+	P "github.com/slow-craft/nautilus-core/constant/provider"
+	"github.com/slow-craft/nautilus-core/rules/common"
 )
 
 var tunnel P.Tunnel

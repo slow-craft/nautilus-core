@@ -18,7 +18,7 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"github.com/metacubex/mihomo/common/maphash"
+	"github.com/slow-craft/nautilus-core/common/maphash"
 )
 
 const (

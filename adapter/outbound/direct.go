@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/metacubex/mihomo/component/dialer"
-	"github.com/metacubex/mihomo/component/loopback"
-	"github.com/metacubex/mihomo/component/resolver"
-	C "github.com/metacubex/mihomo/constant"
+	"github.com/slow-craft/nautilus-core/component/dialer"
+	"github.com/slow-craft/nautilus-core/component/loopback"
+	"github.com/slow-craft/nautilus-core/component/resolver"
+	C "github.com/slow-craft/nautilus-core/constant"
 )
 
 type Direct struct {

@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/metacubex/mihomo/common/structure"
-	C "github.com/metacubex/mihomo/constant"
+	"github.com/slow-craft/nautilus-core/common/structure"
+	C "github.com/slow-craft/nautilus-core/constant"
 )
 
 // --- mock helpers ---

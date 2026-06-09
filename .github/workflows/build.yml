@@ -199,14 +199,14 @@ jobs:
         GOMIPS: ${{matrix.jobs.gomips}}
       run: |
         go env
-        go build -v -tags "with_gvisor" -trimpath -ldflags "${BUILDTAG} -X 'github.com/metacubex/mihomo/constant.Version=${VERSION}' -X 'github.com/metacubex/mihomo/constant.BuildTime=${BUILDTIME}' -w -s -buildid="
+        go build -v -tags "with_gvisor" -trimpath -ldflags "${BUILDTAG} -X 'github.com/slow-craft/nautilus-core/constant.Version=${VERSION}' -X 'github.com/slow-craft/nautilus-core/constant.BuildTime=${BUILDTIME}' -w -s -buildid="
         if [ "${{matrix.jobs.goos}}" = "windows" ]; then
-          cp mihomo.exe mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
-          zip -r mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.zip mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
+          cp nautilus-core.exe nautilus-core-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
+          zip -r nautilus-core-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.zip nautilus-core-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
         else
-          cp mihomo mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
-          gzip -c mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}} > mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.gz
-          rm mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
+          cp nautilus-core nautilus-core-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
+          gzip -c nautilus-core-${{matrix.jobs.goos}}-${{matrix.jobs.output}} > nautilus-core-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.gz
+          rm nautilus-core-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
         fi
 
     - name: Package DEB
@@ -218,9 +218,9 @@ jobs:
 
         fpm -t deb \
           -v "${PackageVersion}" \
-          -p "mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.deb" \
+          -p "nautilus-core-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.deb" \
           --architecture ${{ matrix.jobs.debian }} \
-          mihomo=/usr/bin/mihomo
+          nautilus-core=/usr/bin/nautilus-core
 
     - name: Package RPM
       if: matrix.jobs.rpm != ''
@@ -231,9 +231,9 @@ jobs:
 
         fpm -t rpm \
           -v "${PackageVersion}" \
-          -p "mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.rpm" \
+          -p "nautilus-core-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.rpm" \
           --architecture ${{ matrix.jobs.rpm }} \
-          mihomo=/usr/bin/mihomo
+          nautilus-core=/usr/bin/nautilus-core
 
     - name: Package Pacman
       if: matrix.jobs.pacman != ''
@@ -245,9 +245,9 @@ jobs:
 
         fpm -t pacman \
           -v "${PackageVersion}" \
-          -p "mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.pkg.tar.zst" \
+          -p "nautilus-core-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.pkg.tar.zst" \
           --architecture ${{ matrix.jobs.pacman }} \
-          mihomo=/usr/bin/mihomo
+          nautilus-core=/usr/bin/nautilus-core
 
     - name: Pack Golang Toolchain
       if: ${{ matrix.jobs.goversion == '' && matrix.jobs.tarball == 'tarball' }}
@@ -274,11 +274,11 @@ jobs:
       with:
         name: "${{ matrix.jobs.goos }}-${{ matrix.jobs.output }}"
         path: |
-          mihomo*.gz
-          mihomo*.deb
-          mihomo*.rpm
-          mihomo*.pkg.tar.zst
-          mihomo*.zip
+          nautilus-core*.gz
+          nautilus-core*.deb
+          nautilus-core*.rpm
+          nautilus-core*.pkg.tar.zst
+          nautilus-core*.zip
           toolchain.tar.gz
           vendor.tar.gz
           version.txt

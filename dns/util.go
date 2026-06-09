@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/metacubex/mihomo/common/picker"
-	"github.com/metacubex/mihomo/component/ech/echparser"
-	"github.com/metacubex/mihomo/component/resolver"
-	"github.com/metacubex/mihomo/log"
+	"github.com/slow-craft/nautilus-core/common/picker"
+	"github.com/slow-craft/nautilus-core/component/ech/echparser"
+	"github.com/slow-craft/nautilus-core/component/resolver"
+	"github.com/slow-craft/nautilus-core/log"
 
 	D "github.com/miekg/dns"
 	"github.com/samber/lo"

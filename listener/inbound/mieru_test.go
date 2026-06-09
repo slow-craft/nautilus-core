@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/metacubex/mihomo/adapter/outbound"
-	"github.com/metacubex/mihomo/listener/inbound"
+	"github.com/slow-craft/nautilus-core/adapter/outbound"
+	"github.com/slow-craft/nautilus-core/listener/inbound"
 	"github.com/stretchr/testify/assert"
 )
 

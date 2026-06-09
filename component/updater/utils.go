@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	mihomoHttp "github.com/metacubex/mihomo/component/http"
+	mihomoHttp "github.com/slow-craft/nautilus-core/component/http"
 
 	"github.com/metacubex/http"
 )

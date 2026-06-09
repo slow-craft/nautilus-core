@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/common/utils"
-	"github.com/metacubex/mihomo/component/slowdown"
-	P "github.com/metacubex/mihomo/constant/provider"
-	"github.com/metacubex/mihomo/log"
+	"github.com/slow-craft/nautilus-core/common/utils"
+	"github.com/slow-craft/nautilus-core/component/slowdown"
+	P "github.com/slow-craft/nautilus-core/constant/provider"
+	"github.com/slow-craft/nautilus-core/log"
 
 	"github.com/metacubex/fswatch"
 	"github.com/samber/lo"

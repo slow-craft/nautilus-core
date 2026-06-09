@@ -4,9 +4,9 @@ import (
 	"context"
 	"net"
 
-	"github.com/metacubex/mihomo/component/ca"
-	tlsC "github.com/metacubex/mihomo/component/tls"
-	"github.com/metacubex/mihomo/log"
+	"github.com/slow-craft/nautilus-core/component/ca"
+	tlsC "github.com/slow-craft/nautilus-core/component/tls"
+	"github.com/slow-craft/nautilus-core/log"
 
 	"github.com/metacubex/sing-shadowtls"
 	"github.com/metacubex/tls"

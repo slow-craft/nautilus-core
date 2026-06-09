@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	sudokuobfs "github.com/metacubex/mihomo/transport/sudoku/obfs/sudoku"
+	sudokuobfs "github.com/slow-craft/nautilus-core/transport/sudoku/obfs/sudoku"
 )
 
 func TestUserHash_StableAcrossTableRotation(t *testing.T) {

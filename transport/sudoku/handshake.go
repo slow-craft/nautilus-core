@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/transport/sudoku/crypto"
-	"github.com/metacubex/mihomo/transport/sudoku/obfs/httpmask"
-	"github.com/metacubex/mihomo/transport/sudoku/obfs/sudoku"
+	"github.com/slow-craft/nautilus-core/transport/sudoku/crypto"
+	"github.com/slow-craft/nautilus-core/transport/sudoku/obfs/httpmask"
+	"github.com/slow-craft/nautilus-core/transport/sudoku/obfs/sudoku"
 )
 
 type SessionType int

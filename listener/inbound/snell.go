@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/listener/snell"
-	"github.com/metacubex/mihomo/log"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/listener/snell"
+	"github.com/slow-craft/nautilus-core/log"
 )
 
 type SnellOption struct {

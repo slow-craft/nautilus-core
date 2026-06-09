@@ -6,7 +6,7 @@ import (
 	"net/netip"
 	"syscall"
 
-	"github.com/metacubex/mihomo/component/iface"
+	"github.com/slow-craft/nautilus-core/component/iface"
 
 	"golang.org/x/sys/unix"
 )

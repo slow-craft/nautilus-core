@@ -3,8 +3,8 @@ package protocol
 import (
 	"net"
 
-	N "github.com/metacubex/mihomo/common/net"
-	"github.com/metacubex/mihomo/common/pool"
+	N "github.com/slow-craft/nautilus-core/common/net"
+	"github.com/slow-craft/nautilus-core/common/pool"
 )
 
 type PacketConn struct {

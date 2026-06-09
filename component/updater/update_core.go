@@ -14,21 +14,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/component/ca"
-	mihomoHttp "github.com/metacubex/mihomo/component/http"
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/constant/features"
-	"github.com/metacubex/mihomo/log"
+	"github.com/slow-craft/nautilus-core/component/ca"
+	mihomoHttp "github.com/slow-craft/nautilus-core/component/http"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/constant/features"
+	"github.com/slow-craft/nautilus-core/log"
 
 	"github.com/metacubex/http"
 )
 
 const (
-	baseReleaseURL    = "https://github.com/MetaCubeX/mihomo/releases/latest/download/"
-	versionReleaseURL = "https://github.com/MetaCubeX/mihomo/releases/latest/download/version.txt"
+	baseReleaseURL    = "https://github.com/slow-craft/nautilus-core/releases/latest/download/"
+	versionReleaseURL = "https://github.com/slow-craft/nautilus-core/releases/latest/download/version.txt"
 
-	baseAlphaURL    = "https://github.com/MetaCubeX/mihomo/releases/download/Prerelease-Alpha/"
-	versionAlphaURL = "https://github.com/MetaCubeX/mihomo/releases/download/Prerelease-Alpha/version.txt"
+	baseAlphaURL    = "https://github.com/slow-craft/nautilus-core/releases/download/Prerelease-Alpha/"
+	versionAlphaURL = "https://github.com/slow-craft/nautilus-core/releases/download/Prerelease-Alpha/version.txt"
 
 	// MaxPackageFileSize is a maximum package file length in bytes. The largest
 	// package whose size is limited by this constant currently has the size of
@@ -52,28 +52,28 @@ var DefaultCoreUpdater = CoreUpdater{}
 func (u *CoreUpdater) CoreBaseName() string {
 	switch runtime.GOARCH {
 	case "arm":
-		// mihomo-linux-armv5
-		return fmt.Sprintf("mihomo-%s-%sv%s", runtime.GOOS, runtime.GOARCH, features.GOARM)
+		// nautilus-core-linux-armv5
+		return fmt.Sprintf("nautilus-core-%s-%sv%s", runtime.GOOS, runtime.GOARCH, features.GOARM)
 	case "arm64":
 		if runtime.GOOS == "android" {
-			// mihomo-android-arm64-v8
-			return fmt.Sprintf("mihomo-%s-%s-v8", runtime.GOOS, runtime.GOARCH)
+			// nautilus-core-android-arm64-v8
+			return fmt.Sprintf("nautilus-core-%s-%s-v8", runtime.GOOS, runtime.GOARCH)
 		} else {
-			// mihomo-linux-arm64
-			return fmt.Sprintf("mihomo-%s-%s", runtime.GOOS, runtime.GOARCH)
+			// nautilus-core-linux-arm64
+			return fmt.Sprintf("nautilus-core-%s-%s", runtime.GOOS, runtime.GOARCH)
 		}
 	case "mips", "mipsle":
-		// mihomo-linux-mips-hardfloat
-		return fmt.Sprintf("mihomo-%s-%s-%s", runtime.GOOS, runtime.GOARCH, features.GOMIPS)
+		// nautilus-core-linux-mips-hardfloat
+		return fmt.Sprintf("nautilus-core-%s-%s-%s", runtime.GOOS, runtime.GOARCH, features.GOMIPS)
 	case "amd64":
-		// mihomo-linux-amd64-v1
-		return fmt.Sprintf("mihomo-%s-%s-%s", runtime.GOOS, runtime.GOARCH, features.GOAMD64)
+		// nautilus-core-linux-amd64-v1
+		return fmt.Sprintf("nautilus-core-%s-%s-%s", runtime.GOOS, runtime.GOARCH, features.GOAMD64)
 	default:
-		// mihomo-linux-386
-		// mihomo-linux-mips64
-		// mihomo-linux-riscv64
-		// mihomo-linux-s390x
-		return fmt.Sprintf("mihomo-%s-%s", runtime.GOOS, runtime.GOARCH)
+		// nautilus-core-linux-386
+		// nautilus-core-linux-mips64
+		// nautilus-core-linux-riscv64
+		// nautilus-core-linux-s390x
+		return fmt.Sprintf("nautilus-core-%s-%s", runtime.GOOS, runtime.GOARCH)
 	}
 }
 

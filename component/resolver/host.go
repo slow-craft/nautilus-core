@@ -8,9 +8,9 @@ import (
 	"strings"
 	_ "unsafe"
 
-	"github.com/metacubex/mihomo/component/resolver/hosts"
-	"github.com/metacubex/mihomo/component/trie"
 	"github.com/metacubex/randv2"
+	"github.com/slow-craft/nautilus-core/component/resolver/hosts"
+	"github.com/slow-craft/nautilus-core/component/trie"
 )
 
 var (

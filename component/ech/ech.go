@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	tlsC "github.com/metacubex/mihomo/component/tls"
 	"github.com/metacubex/tls"
+	tlsC "github.com/slow-craft/nautilus-core/component/tls"
 )
 
 type Config struct {

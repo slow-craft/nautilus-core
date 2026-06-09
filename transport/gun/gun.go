@@ -16,12 +16,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/metacubex/mihomo/common/buf"
-	"github.com/metacubex/mihomo/common/httputils"
-	"github.com/metacubex/mihomo/common/pool"
-	tlsC "github.com/metacubex/mihomo/component/tls"
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/transport/vmess"
+	"github.com/slow-craft/nautilus-core/common/buf"
+	"github.com/slow-craft/nautilus-core/common/httputils"
+	"github.com/slow-craft/nautilus-core/common/pool"
+	tlsC "github.com/slow-craft/nautilus-core/component/tls"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/transport/vmess"
 
 	"github.com/metacubex/http"
 )

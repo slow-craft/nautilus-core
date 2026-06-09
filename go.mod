@@ -1,4 +1,4 @@
-module github.com/metacubex/mihomo
+module github.com/slow-craft/nautilus-core
 
 go 1.24.0
 

@@ -4,14 +4,14 @@ import (
 	"errors"
 	"net"
 
-	"github.com/metacubex/mihomo/adapter/inbound"
-	"github.com/metacubex/mihomo/component/ca"
-	"github.com/metacubex/mihomo/component/ech"
-	C "github.com/metacubex/mihomo/constant"
-	authStore "github.com/metacubex/mihomo/listener/auth"
-	LC "github.com/metacubex/mihomo/listener/config"
-	"github.com/metacubex/mihomo/listener/reality"
-	"github.com/metacubex/mihomo/ntp"
+	"github.com/slow-craft/nautilus-core/adapter/inbound"
+	"github.com/slow-craft/nautilus-core/component/ca"
+	"github.com/slow-craft/nautilus-core/component/ech"
+	C "github.com/slow-craft/nautilus-core/constant"
+	authStore "github.com/slow-craft/nautilus-core/listener/auth"
+	LC "github.com/slow-craft/nautilus-core/listener/config"
+	"github.com/slow-craft/nautilus-core/listener/reality"
+	"github.com/slow-craft/nautilus-core/ntp"
 
 	"github.com/metacubex/tls"
 )

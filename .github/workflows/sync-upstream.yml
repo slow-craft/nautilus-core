@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: Meta
+          ref: Alpha
           fetch-depth: 0
 
       - name: Get latest upstream tag
@@ -38,24 +38,58 @@ jobs:
         id: sync
         uses: aormber/Fork-Sync-With-Upstream-action@v1.4.1
         with:
-          target_sync_branch: Meta
+          target_sync_branch: Alpha
           target_repo_token: ${{ secrets.GITHUB_TOKEN }}
           upstream_sync_branch: Meta
           upstream_sync_repo: MetaCubeX/mihomo
           test_branch_name: sync-upstream-${{ steps.upstream_tag.outputs.tag }}
           test_mode: true
 
+      - name: Set up Go
+        if: steps.check_tag.outputs.exists == 'false' && steps.sync.outputs.has_new_commits == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Apply rebrand rewrite to synced files
+        if: steps.check_tag.outputs.exists == 'false' && steps.sync.outputs.has_new_commits == 'true'
+        run: |
+          set -euo pipefail
+          git fetch origin sync-upstream-${{ steps.upstream_tag.outputs.tag }}
+          git checkout sync-upstream-${{ steps.upstream_tag.outputs.tag }}
+
+          find . -type f \( -name "*.go" -o -name "go.mod" -o -name "*.proto" -o -name "*.nix" \) \
+            ! -path "./.git/*" -print0 \
+            | xargs -0 sed -i 's|github.com/metacubex/mihomo|github.com/slow-craft/nautilus-core|g'
+          gofmt -w .
+
+          if git diff --quiet; then
+            echo "No rebrand changes needed."
+          else
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git config user.name "github-actions[bot]"
+            git add -A
+            git commit -m "chore: apply rebrand rewrite after upstream sync"
+            git push origin sync-upstream-${{ steps.upstream_tag.outputs.tag }}
+          fi
+
       - name: Create Pull Request
         if: steps.check_tag.outputs.exists == 'false' && steps.sync.outputs.has_new_commits == 'true'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: sync-upstream-${{ steps.upstream_tag.outputs.tag }}
-          base: Meta
-          title: "chore: sync upstream ${{ steps.upstream_tag.outputs.tag }}"
-          body: |
-            Automated PR to sync changes from upstream repository.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base Alpha \
+            --head sync-upstream-${{ steps.upstream_tag.outputs.tag }} \
+            --title "chore: sync upstream ${{ steps.upstream_tag.outputs.tag }}" \
+            --label sync-upstream \
+            --body "$(cat <<'EOF'
+          Automated PR to sync changes from upstream repository.
 
-            Upstream: MetaCubeX/mihomo (Meta branch)
-            New tag: ${{ steps.upstream_tag.outputs.tag }}
-          labels: sync-upstream
+          Upstream: MetaCubeX/mihomo (Meta branch)
+          New tag: ${{ steps.upstream_tag.outputs.tag }}
+
+          > ⚠️ Auto rebrand rewrite has been applied (\`github.com/metacubex/mihomo\` → \`github.com/slow-craft/nautilus-core\`).
+          > Please verify \`go build ./...\` passes before merging.
+          EOF
+          )"

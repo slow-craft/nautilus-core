@@ -1,7 +1,7 @@
 package profile
 
 import (
-	"github.com/metacubex/mihomo/common/atomic"
+	"github.com/slow-craft/nautilus-core/common/atomic"
 )
 
 // StoreSelected is a global switch for storing selected proxy to cache

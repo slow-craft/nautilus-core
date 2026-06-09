@@ -9,7 +9,7 @@ import (
 	"net/netip"
 	"strconv"
 
-	"github.com/metacubex/mihomo/component/auth"
+	"github.com/slow-craft/nautilus-core/component/auth"
 )
 
 // Error represents a SOCKS error
