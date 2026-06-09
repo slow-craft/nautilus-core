@@ -5,6 +5,10 @@ on:
     - cron: "0 0 * * 0" # Run weekly on Sunday at midnight UTC
   workflow_dispatch: # Allow manual trigger
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -33,17 +37,27 @@ jobs:
             echo "Tag ${{ steps.upstream_tag.outputs.tag }} is new"
           fi
 
-      - name: Sync upstream changes
+      - name: Merge upstream Meta into sync branch
         if: steps.check_tag.outputs.exists == 'false'
         id: sync
-        uses: aormber/Fork-Sync-With-Upstream-action@v1.4.1
-        with:
-          target_sync_branch: Alpha
-          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
-          upstream_sync_branch: Meta
-          upstream_sync_repo: MetaCubeX/mihomo
-          test_branch_name: sync-upstream-${{ steps.upstream_tag.outputs.tag }}
-          test_mode: true
+        run: |
+          set -euo pipefail
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+          git remote add upstream https://github.com/MetaCubeX/mihomo.git
+          git fetch upstream Meta
+
+          if git merge-base --is-ancestor upstream/Meta HEAD; then
+            echo "Upstream Meta is already merged; nothing to do."
+            echo "has_new_commits=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          BRANCH_NAME=sync-upstream-${{ steps.upstream_tag.outputs.tag }}
+          git checkout -b "$BRANCH_NAME"
+          git merge upstream/Meta --no-edit -m "chore: merge upstream Meta ${{ steps.upstream_tag.outputs.tag }}"
+          echo "has_new_commits=true" >> $GITHUB_OUTPUT
 
       - name: Set up Go
         if: steps.check_tag.outputs.exists == 'false' && steps.sync.outputs.has_new_commits == 'true'
@@ -55,9 +69,6 @@ jobs:
         if: steps.check_tag.outputs.exists == 'false' && steps.sync.outputs.has_new_commits == 'true'
         run: |
           set -euo pipefail
-          git fetch origin sync-upstream-${{ steps.upstream_tag.outputs.tag }}
-          git checkout sync-upstream-${{ steps.upstream_tag.outputs.tag }}
-
           find . -type f \( -name "*.go" -o -name "go.mod" -o -name "*.proto" -o -name "*.nix" \) \
             ! -path "./.git/*" -print0 \
             | xargs -0 sed -i 's|github.com/metacubex/mihomo|github.com/slow-craft/nautilus-core|g'
@@ -66,12 +77,14 @@ jobs:
           if git diff --quiet; then
             echo "No rebrand changes needed."
           else
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git config user.name "github-actions[bot]"
             git add -A
             git commit -m "chore: apply rebrand rewrite after upstream sync"
-            git push origin sync-upstream-${{ steps.upstream_tag.outputs.tag }}
           fi
+
+      - name: Push sync branch
+        if: steps.check_tag.outputs.exists == 'false' && steps.sync.outputs.has_new_commits == 'true'
+        run: |
+          git push origin sync-upstream-${{ steps.upstream_tag.outputs.tag }}
 
       - name: Create Pull Request
         if: steps.check_tag.outputs.exists == 'false' && steps.sync.outputs.has_new_commits == 'true'
