@@ -181,13 +181,6 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 			break
 		}
 		proxy, err = outbound.NewTrustTunnel(*trustTunnelOption)
-	case "multi-protocol":
-		mpOption := &outbound.MultiProtocolOption{BasicOption: basicOption}
-		err = decoder.Decode(mapping, mpOption)
-		if err != nil {
-			break
-		}
-		proxy, err = outbound.NewMultiProtocol(*mpOption)
 	case "openvpn":
 		openVPNOption := &outbound.OpenVPNOption{BasicOption: basicOption}
 		err = decoder.Decode(mapping, openVPNOption)
@@ -211,9 +204,6 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 	}
 
 	if muxMapping, muxExist := mapping["smux"].(map[string]any); muxExist {
-		if proxyType == "multi-protocol" {
-			return nil, fmt.Errorf("smux is not compatible with multi-protocol: mux sessions break on protocol failover")
-		}
 		muxOption := &outbound.SingMuxOption{}
 		err = decoder.Decode(muxMapping, muxOption)
 		if err != nil {

@@ -48,7 +48,6 @@ const (
 	Sudoku
 	Masque
 	TrustTunnel
-	MultiProtocol
 	OpenVPN
 	Tailscale
 	GostRelay
@@ -225,8 +224,6 @@ func (at AdapterType) String() string {
 		return "Masque"
 	case TrustTunnel:
 		return "TrustTunnel"
-	case MultiProtocol:
-		return "MultiProtocol"
 	case OpenVPN:
 		return "OpenVPN"
 	case Tailscale:
