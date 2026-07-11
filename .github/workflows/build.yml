@@ -422,7 +422,14 @@ jobs:
         with:
           path: bin/
           merge-multiple: true
-  
+
+      - name: Calculate checksums
+        run: |
+          cd bin/
+          find . -type f -not -name "checksums.*" -not -name "version.txt" | sort | xargs sha256sum > checksums.txt
+          cat checksums.txt
+        shell: bash
+
       - name: Display structure of downloaded files
         run: ls -R
         working-directory: bin
