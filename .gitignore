@@ -31,6 +31,12 @@ test/config/cache*
 .claude/
 CLAUDE.md
 
+# Codex
+.codex/
+.agents/
+AGENTS.md
+AGENTS.override.md
+
 # Local justfile
 justfile
 
