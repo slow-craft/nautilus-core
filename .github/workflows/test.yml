@@ -68,3 +68,19 @@ jobs:
 
       - name: Test with tag with_gvisor
         run: go test ./... -v -count=1 -tags "with_gvisor"
+
+      - name: Test slim client exclusions
+        if: ${{ runner.os == 'Linux' }}
+        run: go test ./adapter -v -count=1 -tags "with_gvisor,cmfa,no_tailscale,slim_client"
+
+      - name: Build slim client feature set
+        if: ${{ runner.os == 'Linux' }}
+        run: go build -tags "with_gvisor,cmfa,no_tailscale,slim_client" ./...
+
+      - name: Verify slim client excludes external controller
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          if go list -deps -tags "with_gvisor,cmfa,no_tailscale,slim_client" ./hub | grep -qx 'github.com/slow-craft/nautilus-core/hub/route'; then
+            echo "slim_client unexpectedly includes hub/route"
+            exit 1
+          fi
