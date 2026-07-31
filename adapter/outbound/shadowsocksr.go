@@ -1,3 +1,5 @@
+//go:build !slim_client
+
 package outbound
 
 import (

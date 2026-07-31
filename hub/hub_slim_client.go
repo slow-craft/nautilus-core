@@ -1,12 +1,10 @@
-//go:build !slim_client
+//go:build slim_client
 
 package hub
 
 import (
 	"github.com/slow-craft/nautilus-core/config"
 	"github.com/slow-craft/nautilus-core/hub/executor"
-	"github.com/slow-craft/nautilus-core/hub/route"
-	"github.com/slow-craft/nautilus-core/log"
 )
 
 type Option func(*config.Config)
@@ -41,37 +39,12 @@ func WithSecret(secret string) Option {
 	}
 }
 
-// ApplyConfig dispatch configure to all parts include ExternalController
+// ApplyConfig applies the core configuration without starting an external controller.
 func ApplyConfig(cfg *config.Config) {
-	applyRoute(cfg)
 	executor.ApplyConfig(cfg, true)
 }
 
-func applyRoute(cfg *config.Config) {
-	if cfg.Controller.ExternalUI != "" {
-		route.SetUIPath(cfg.Controller.ExternalUI)
-	}
-	route.ReCreateServer(&route.Config{
-		Addr:           cfg.Controller.ExternalController,
-		TLSAddr:        cfg.Controller.ExternalControllerTLS,
-		UnixAddr:       cfg.Controller.ExternalControllerUnix,
-		PipeAddr:       cfg.Controller.ExternalControllerPipe,
-		Secret:         cfg.Controller.Secret,
-		Certificate:    cfg.TLS.Certificate,
-		PrivateKey:     cfg.TLS.PrivateKey,
-		ClientAuthType: cfg.TLS.ClientAuthType,
-		ClientAuthCert: cfg.TLS.ClientAuthCert,
-		EchKey:         cfg.TLS.EchKey,
-		DohServer:      cfg.Controller.ExternalDohServer,
-		IsDebug:        cfg.General.LogLevel == log.DEBUG,
-		Cors: route.Cors{
-			AllowOrigins:        cfg.Controller.Cors.AllowOrigins,
-			AllowPrivateNetwork: cfg.Controller.Cors.AllowPrivateNetwork,
-		},
-	})
-}
-
-// Parse call at the beginning of mihomo
+// Parse parses and applies a core configuration.
 func Parse(configBytes []byte, options ...Option) error {
 	var cfg *config.Config
 	var err error
@@ -81,7 +54,6 @@ func Parse(configBytes []byte, options ...Option) error {
 	} else {
 		cfg, err = executor.Parse()
 	}
-
 	if err != nil {
 		return err
 	}
