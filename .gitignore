@@ -38,3 +38,7 @@ justfile
 mihomo-test
 test.yaml
 backup/
+
+# Local agent design artifacts
+/docs/superpowers/
+/.superpowers/
