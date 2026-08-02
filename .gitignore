@@ -40,3 +40,7 @@ test.yaml
 backup/
 
 docs/plans/
+
+# Local agent design artifacts
+/docs/superpowers/
+/.superpowers/
