@@ -3,3 +3,7 @@ venv
 build
 mihomo.egg-info
 *.ipynb
+
+# Local agent design artifacts
+/docs/superpowers/
+/.superpowers/
