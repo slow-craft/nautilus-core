@@ -5,8 +5,8 @@ import (
 	"net"
 	"net/netip"
 
-	"github.com/slow-craft/nautilus-core/common/atomic"
-	"github.com/slow-craft/nautilus-core/component/resolver"
+	"github.com/metacubex/mihomo/common/atomic"
+	"github.com/metacubex/mihomo/component/resolver"
 )
 
 var (

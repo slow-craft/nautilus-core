@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/slow-craft/nautilus-core/component/iface"
+	"github.com/metacubex/mihomo/component/iface"
 )
 
 const (

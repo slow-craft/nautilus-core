@@ -7,9 +7,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/slow-craft/nautilus-core/adapter/outboundgroup"
-	"github.com/slow-craft/nautilus-core/common/structure"
-	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/metacubex/mihomo/adapter/outboundgroup"
+	"github.com/metacubex/mihomo/common/structure"
+	C "github.com/metacubex/mihomo/constant"
 )
 
 // Check if ProxyGroups form DAG(Directed Acyclic Graph), and sort all ProxyGroups by dependency order.

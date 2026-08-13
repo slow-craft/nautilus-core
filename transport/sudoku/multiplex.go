@@ -7,7 +7,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/slow-craft/nautilus-core/transport/sudoku/multiplex"
+	"github.com/metacubex/mihomo/transport/sudoku/multiplex"
 )
 
 // StartMultiplexClient upgrades an already-handshaked Sudoku tunnel into a multiplex session.

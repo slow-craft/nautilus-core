@@ -4,11 +4,11 @@ import (
 	"context"
 	"net"
 
-	"github.com/slow-craft/nautilus-core/adapter/inbound"
-	"github.com/slow-craft/nautilus-core/component/keepalive"
-	"github.com/slow-craft/nautilus-core/component/mptcp"
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/transport/socks5"
+	"github.com/metacubex/mihomo/adapter/inbound"
+	"github.com/metacubex/mihomo/component/keepalive"
+	"github.com/metacubex/mihomo/component/mptcp"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/transport/socks5"
 )
 
 type Listener struct {

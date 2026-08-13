@@ -6,8 +6,8 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/singledo"
-	"github.com/slow-craft/nautilus-core/component/iface/anet"
+	"github.com/metacubex/mihomo/common/singledo"
+	"github.com/metacubex/mihomo/component/iface/anet"
 
 	"github.com/metacubex/bart"
 )

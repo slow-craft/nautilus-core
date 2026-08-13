@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/slow-craft/nautilus-core/common/observable"
+	"github.com/metacubex/mihomo/common/observable"
 
 	log "github.com/sirupsen/logrus"
 )

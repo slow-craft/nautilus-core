@@ -9,9 +9,9 @@ import (
 	"net/netip"
 	"sync"
 
-	"github.com/slow-craft/nautilus-core/common/pool"
-	"github.com/slow-craft/nautilus-core/transport/shadowsocks/shadowaead"
-	"github.com/slow-craft/nautilus-core/transport/socks5"
+	"github.com/metacubex/mihomo/common/pool"
+	"github.com/metacubex/mihomo/transport/shadowsocks/shadowaead"
+	"github.com/metacubex/mihomo/transport/socks5"
 )
 
 const (

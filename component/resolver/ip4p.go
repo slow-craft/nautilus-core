@@ -5,7 +5,7 @@ import (
 	"net/netip"
 	"strconv"
 
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/log"
 )
 
 var (

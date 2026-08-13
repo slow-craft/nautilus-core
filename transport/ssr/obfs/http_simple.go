@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/slow-craft/nautilus-core/common/pool"
+	"github.com/metacubex/mihomo/common/pool"
 
 	"github.com/metacubex/randv2"
 )

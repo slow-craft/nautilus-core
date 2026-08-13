@@ -6,9 +6,9 @@ import (
 	"io"
 	"net"
 
-	"github.com/slow-craft/nautilus-core/common/buf"
-	N "github.com/slow-craft/nautilus-core/common/net"
-	"github.com/slow-craft/nautilus-core/transport/vless/vision"
+	"github.com/metacubex/mihomo/common/buf"
+	N "github.com/metacubex/mihomo/common/net"
+	"github.com/metacubex/mihomo/transport/vless/vision"
 
 	"github.com/gofrs/uuid/v5"
 	"google.golang.org/protobuf/proto"

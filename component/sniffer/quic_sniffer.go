@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/buf"
-	"github.com/slow-craft/nautilus-core/common/pool"
-	"github.com/slow-craft/nautilus-core/common/utils"
-	"github.com/slow-craft/nautilus-core/constant"
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/constant/sniffer"
+	"github.com/metacubex/mihomo/common/buf"
+	"github.com/metacubex/mihomo/common/pool"
+	"github.com/metacubex/mihomo/common/utils"
+	"github.com/metacubex/mihomo/constant"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/constant/sniffer"
 
 	"github.com/metacubex/quic-go/quicvarint"
 	"golang.org/x/crypto/hkdf"

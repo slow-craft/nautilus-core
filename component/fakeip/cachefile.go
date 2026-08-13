@@ -3,7 +3,7 @@ package fakeip
 import (
 	"net/netip"
 
-	"github.com/slow-craft/nautilus-core/component/profile/cachefile"
+	"github.com/metacubex/mihomo/component/profile/cachefile"
 )
 
 type cachefileStore struct {

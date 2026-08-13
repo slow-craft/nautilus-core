@@ -1,7 +1,7 @@
 package faketcp
 
 import (
-	"github.com/slow-craft/nautilus-core/transport/hysteria/obfs"
+	"github.com/metacubex/mihomo/transport/hysteria/obfs"
 	"net"
 	"sync"
 	"syscall"

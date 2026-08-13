@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/slow-craft/nautilus-core/component/geodata"
-	"github.com/slow-craft/nautilus-core/component/geodata/router"
+	"github.com/metacubex/mihomo/component/geodata"
+	"github.com/metacubex/mihomo/component/geodata/router"
 )
 
 type memConservativeLoader struct {

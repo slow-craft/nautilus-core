@@ -3,10 +3,10 @@ package rules
 import (
 	"fmt"
 
-	C "github.com/slow-craft/nautilus-core/constant"
-	RC "github.com/slow-craft/nautilus-core/rules/common"
-	"github.com/slow-craft/nautilus-core/rules/logic"
-	RP "github.com/slow-craft/nautilus-core/rules/provider"
+	C "github.com/metacubex/mihomo/constant"
+	RC "github.com/metacubex/mihomo/rules/common"
+	"github.com/metacubex/mihomo/rules/logic"
+	RP "github.com/metacubex/mihomo/rules/provider"
 )
 
 func ParseRule(tp, payload, target string, params []string, subRules map[string][]C.Rule) (parsed C.Rule, parseErr error) {

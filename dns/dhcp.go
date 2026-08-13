@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/metacubex/mihomo/component/dhcp"
+	"github.com/metacubex/mihomo/component/iface"
 	D "github.com/miekg/dns"
-	"github.com/slow-craft/nautilus-core/component/dhcp"
-	"github.com/slow-craft/nautilus-core/component/iface"
 )
 
 const (

@@ -5,7 +5,7 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/log"
 )
 
 func StartRoutine(ctx context.Context, d time.Duration, f func()) {

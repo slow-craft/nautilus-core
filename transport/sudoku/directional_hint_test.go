@@ -6,8 +6,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/slow-craft/nautilus-core/transport/sudoku/crypto"
-	sudokuobfs "github.com/slow-craft/nautilus-core/transport/sudoku/obfs/sudoku"
+	"github.com/metacubex/mihomo/transport/sudoku/crypto"
+	sudokuobfs "github.com/metacubex/mihomo/transport/sudoku/obfs/sudoku"
 )
 
 func TestDirectionalCustomTableRotationHintRoundTrip(t *testing.T) {

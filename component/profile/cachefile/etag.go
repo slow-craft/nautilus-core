@@ -3,8 +3,8 @@ package cachefile
 import (
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/utils"
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/common/utils"
+	"github.com/metacubex/mihomo/log"
 
 	"github.com/metacubex/bbolt"
 	"github.com/vmihailenco/msgpack/v5"

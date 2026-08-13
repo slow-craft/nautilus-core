@@ -6,8 +6,8 @@ import (
 	"net"
 	"runtime"
 
-	"github.com/slow-craft/nautilus-core/transport/tuic/common"
-	"github.com/slow-craft/nautilus-core/transport/vmess"
+	"github.com/metacubex/mihomo/transport/tuic/common"
+	"github.com/metacubex/mihomo/transport/vmess"
 
 	"github.com/metacubex/http"
 	"github.com/metacubex/quic-go"

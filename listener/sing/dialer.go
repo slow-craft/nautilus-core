@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net"
 
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/listener/inner"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/listener/inner"
 
 	M "github.com/metacubex/sing/common/metadata"
 	N "github.com/metacubex/sing/common/network"

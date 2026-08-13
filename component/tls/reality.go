@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/log"
-	"github.com/slow-craft/nautilus-core/ntp"
+	"github.com/metacubex/mihomo/log"
+	"github.com/metacubex/mihomo/ntp"
 
 	"github.com/metacubex/http"
 	"github.com/metacubex/randv2"

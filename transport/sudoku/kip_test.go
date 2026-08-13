@@ -3,7 +3,7 @@ package sudoku
 import (
 	"testing"
 
-	sudokuobfs "github.com/slow-craft/nautilus-core/transport/sudoku/obfs/sudoku"
+	sudokuobfs "github.com/metacubex/mihomo/transport/sudoku/obfs/sudoku"
 )
 
 func TestKIPClientHelloTableHintRoundTrip(t *testing.T) {

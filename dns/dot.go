@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/deque"
-	"github.com/slow-craft/nautilus-core/component/ca"
-	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/metacubex/mihomo/common/deque"
+	"github.com/metacubex/mihomo/component/ca"
+	C "github.com/metacubex/mihomo/constant"
 
 	"github.com/metacubex/tls"
 	D "github.com/miekg/dns"

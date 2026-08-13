@@ -3,9 +3,9 @@ package sniffer
 import (
 	"errors"
 
-	"github.com/slow-craft/nautilus-core/common/utils"
-	"github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/constant/sniffer"
+	"github.com/metacubex/mihomo/common/utils"
+	"github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/constant/sniffer"
 )
 
 type SnifferConfig struct {

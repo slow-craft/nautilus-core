@@ -4,8 +4,8 @@ import (
 	"context"
 	"net"
 
+	"github.com/metacubex/mihomo/component/slowdown"
 	M "github.com/metacubex/sing/common/metadata"
-	"github.com/slow-craft/nautilus-core/component/slowdown"
 )
 
 type SlowDownSingDialer struct {

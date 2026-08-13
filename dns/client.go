@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/log"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/log"
 
 	D "github.com/miekg/dns"
 )

@@ -3,8 +3,8 @@ package convert_test
 import (
 	"testing"
 
-	"github.com/slow-craft/nautilus-core/adapter"
-	. "github.com/slow-craft/nautilus-core/common/convert"
+	"github.com/metacubex/mihomo/adapter"
+	. "github.com/metacubex/mihomo/common/convert"
 
 	"github.com/stretchr/testify/assert"
 )

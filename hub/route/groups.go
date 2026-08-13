@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/adapter/outboundgroup"
-	"github.com/slow-craft/nautilus-core/common/utils"
-	"github.com/slow-craft/nautilus-core/component/profile/cachefile"
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/tunnel"
+	"github.com/metacubex/mihomo/adapter/outboundgroup"
+	"github.com/metacubex/mihomo/common/utils"
+	"github.com/metacubex/mihomo/component/profile/cachefile"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/tunnel"
 
 	"github.com/metacubex/chi"
 	"github.com/metacubex/chi/render"

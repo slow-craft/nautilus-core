@@ -1,6 +1,6 @@
 package sniffer
 
-import "github.com/slow-craft/nautilus-core/constant"
+import "github.com/metacubex/mihomo/constant"
 
 type Sniffer interface {
 	SupportNetwork() constant.NetWork

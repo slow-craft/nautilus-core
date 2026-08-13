@@ -3,8 +3,8 @@ package geodata
 import (
 	"fmt"
 
-	"github.com/slow-craft/nautilus-core/component/geodata/router"
-	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/metacubex/mihomo/component/geodata/router"
+	C "github.com/metacubex/mihomo/constant"
 )
 
 type loader struct {

@@ -4,9 +4,9 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/slow-craft/nautilus-core/component/ech"
-	"github.com/slow-craft/nautilus-core/transport/sudoku"
-	"github.com/slow-craft/nautilus-core/transport/vless/encryption"
+	"github.com/metacubex/mihomo/component/ech"
+	"github.com/metacubex/mihomo/transport/sudoku"
+	"github.com/metacubex/mihomo/transport/vless/encryption"
 
 	"github.com/gofrs/uuid/v5"
 )

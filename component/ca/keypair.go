@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	C "github.com/slow-craft/nautilus-core/constant"
+	C "github.com/metacubex/mihomo/constant"
 
 	"github.com/metacubex/fswatch"
 	"github.com/metacubex/tls"

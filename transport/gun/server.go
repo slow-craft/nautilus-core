@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/slow-craft/nautilus-core/common/buf"
-	"github.com/slow-craft/nautilus-core/common/httputils"
-	N "github.com/slow-craft/nautilus-core/common/net"
+	"github.com/metacubex/mihomo/common/buf"
+	"github.com/metacubex/mihomo/common/httputils"
+	N "github.com/metacubex/mihomo/common/net"
 
 	"github.com/metacubex/http"
 )

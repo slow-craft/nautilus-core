@@ -11,7 +11,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/slow-craft/nautilus-core/common/maphash"
+	"github.com/metacubex/mihomo/common/maphash"
 
 	"github.com/metacubex/randv2"
 )

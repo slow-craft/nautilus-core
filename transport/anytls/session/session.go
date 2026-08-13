@@ -12,12 +12,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/buf"
-	"github.com/slow-craft/nautilus-core/common/pool"
-	"github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/log"
-	"github.com/slow-craft/nautilus-core/transport/anytls/padding"
-	"github.com/slow-craft/nautilus-core/transport/anytls/util"
+	"github.com/metacubex/mihomo/common/buf"
+	"github.com/metacubex/mihomo/common/pool"
+	"github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/log"
+	"github.com/metacubex/mihomo/transport/anytls/padding"
+	"github.com/metacubex/mihomo/transport/anytls/util"
 )
 
 type Session struct {

@@ -3,8 +3,8 @@ package config
 import (
 	"encoding/json"
 
-	"github.com/slow-craft/nautilus-core/listener/reality"
-	"github.com/slow-craft/nautilus-core/listener/sing"
+	"github.com/metacubex/mihomo/listener/reality"
+	"github.com/metacubex/mihomo/listener/sing"
 )
 
 type TrojanUser struct {

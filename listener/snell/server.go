@@ -12,13 +12,13 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/slow-craft/nautilus-core/adapter/inbound"
-	N "github.com/slow-craft/nautilus-core/common/net"
-	"github.com/slow-craft/nautilus-core/common/utils"
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/transport/shadowsocks/shadowaead"
-	obfs "github.com/slow-craft/nautilus-core/transport/simple-obfs"
-	"github.com/slow-craft/nautilus-core/transport/snell"
+	"github.com/metacubex/mihomo/adapter/inbound"
+	N "github.com/metacubex/mihomo/common/net"
+	"github.com/metacubex/mihomo/common/utils"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/transport/shadowsocks/shadowaead"
+	obfs "github.com/metacubex/mihomo/transport/simple-obfs"
+	"github.com/metacubex/mihomo/transport/snell"
 )
 
 const maxPacketLength = 0x3fff

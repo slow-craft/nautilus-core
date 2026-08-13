@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/slow-craft/nautilus-core/adapter/inbound"
-	"github.com/slow-craft/nautilus-core/common/pool"
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/transport/socks5"
+	"github.com/metacubex/mihomo/adapter/inbound"
+	"github.com/metacubex/mihomo/common/pool"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/transport/socks5"
 )
 
 type PacketConn struct {

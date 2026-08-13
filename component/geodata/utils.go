@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/slow-craft/nautilus-core/common/singleflight"
-	"github.com/slow-craft/nautilus-core/component/geodata/router"
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/common/singleflight"
+	"github.com/metacubex/mihomo/component/geodata/router"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/log"
 )
 
 var (

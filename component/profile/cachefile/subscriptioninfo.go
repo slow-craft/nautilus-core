@@ -1,7 +1,7 @@
 package cachefile
 
 import (
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/log"
 
 	"github.com/metacubex/bbolt"
 )

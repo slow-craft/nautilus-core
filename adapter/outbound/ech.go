@@ -5,8 +5,8 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/slow-craft/nautilus-core/component/ech"
-	"github.com/slow-craft/nautilus-core/component/resolver"
+	"github.com/metacubex/mihomo/component/ech"
+	"github.com/metacubex/mihomo/component/resolver"
 )
 
 type ECHOptions struct {

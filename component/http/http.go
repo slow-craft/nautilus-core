@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/component/ca"
-	"github.com/slow-craft/nautilus-core/component/dialer"
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/listener/inner"
+	"github.com/metacubex/mihomo/component/ca"
+	"github.com/metacubex/mihomo/component/dialer"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/listener/inner"
 
 	"github.com/metacubex/http"
 )

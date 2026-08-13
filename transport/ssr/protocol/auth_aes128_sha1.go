@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"strings"
 
-	N "github.com/slow-craft/nautilus-core/common/net"
-	"github.com/slow-craft/nautilus-core/common/pool"
-	"github.com/slow-craft/nautilus-core/log"
-	"github.com/slow-craft/nautilus-core/transport/ssr/tools"
+	N "github.com/metacubex/mihomo/common/net"
+	"github.com/metacubex/mihomo/common/pool"
+	"github.com/metacubex/mihomo/log"
+	"github.com/metacubex/mihomo/transport/ssr/tools"
 
 	"github.com/metacubex/randv2"
 )

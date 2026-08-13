@@ -3,7 +3,7 @@ package inbound_test
 import (
 	"testing"
 
-	"github.com/slow-craft/nautilus-core/adapter/outbound"
+	"github.com/metacubex/mihomo/adapter/outbound"
 
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/slices"

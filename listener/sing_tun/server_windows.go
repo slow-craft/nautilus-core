@@ -3,8 +3,8 @@ package sing_tun
 import (
 	"time"
 
-	"github.com/slow-craft/nautilus-core/constant/features"
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/constant/features"
+	"github.com/metacubex/mihomo/log"
 
 	tun "github.com/metacubex/sing-tun"
 )

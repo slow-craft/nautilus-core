@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/log"
 
 	"golang.org/x/sys/windows"
 )

@@ -12,10 +12,10 @@ import (
 	"reflect"
 	"unsafe"
 
-	N "github.com/slow-craft/nautilus-core/common/net"
-	tlsC "github.com/slow-craft/nautilus-core/component/tls"
-	"github.com/slow-craft/nautilus-core/log"
-	"github.com/slow-craft/nautilus-core/transport/vless/encryption"
+	N "github.com/metacubex/mihomo/common/net"
+	tlsC "github.com/metacubex/mihomo/component/tls"
+	"github.com/metacubex/mihomo/log"
+	"github.com/metacubex/mihomo/transport/vless/encryption"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/metacubex/tls"

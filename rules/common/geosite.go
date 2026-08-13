@@ -3,12 +3,12 @@ package common
 import (
 	"fmt"
 
-	"github.com/slow-craft/nautilus-core/component/geodata"
-	_ "github.com/slow-craft/nautilus-core/component/geodata/memconservative"
-	"github.com/slow-craft/nautilus-core/component/geodata/router"
-	_ "github.com/slow-craft/nautilus-core/component/geodata/standard"
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/component/geodata"
+	_ "github.com/metacubex/mihomo/component/geodata/memconservative"
+	"github.com/metacubex/mihomo/component/geodata/router"
+	_ "github.com/metacubex/mihomo/component/geodata/standard"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/log"
 )
 
 type GEOSITE struct {

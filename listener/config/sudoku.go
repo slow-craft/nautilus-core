@@ -3,7 +3,7 @@ package config
 import (
 	"encoding/json"
 
-	"github.com/slow-craft/nautilus-core/listener/sing"
+	"github.com/metacubex/mihomo/listener/sing"
 )
 
 // SudokuServer describes a Sudoku inbound server configuration.

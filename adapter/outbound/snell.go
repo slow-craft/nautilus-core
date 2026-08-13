@@ -8,11 +8,11 @@ import (
 	"net"
 	"strconv"
 
-	N "github.com/slow-craft/nautilus-core/common/net"
-	"github.com/slow-craft/nautilus-core/common/structure"
-	C "github.com/slow-craft/nautilus-core/constant"
-	obfs "github.com/slow-craft/nautilus-core/transport/simple-obfs"
-	"github.com/slow-craft/nautilus-core/transport/snell"
+	N "github.com/metacubex/mihomo/common/net"
+	"github.com/metacubex/mihomo/common/structure"
+	C "github.com/metacubex/mihomo/constant"
+	obfs "github.com/metacubex/mihomo/transport/simple-obfs"
+	"github.com/metacubex/mihomo/transport/snell"
 )
 
 type Snell struct {

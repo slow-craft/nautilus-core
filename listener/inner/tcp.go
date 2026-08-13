@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net"
 
-	N "github.com/slow-craft/nautilus-core/common/net"
-	C "github.com/slow-craft/nautilus-core/constant"
+	N "github.com/metacubex/mihomo/common/net"
+	C "github.com/metacubex/mihomo/constant"
 )
 
 var tunnel C.Tunnel
