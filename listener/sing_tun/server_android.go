@@ -6,10 +6,10 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/metacubex/mihomo/component/process"
-	"github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/constant/features"
-	"github.com/metacubex/mihomo/log"
+	"github.com/slow-craft/nautilus-core/component/process"
+	"github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/constant/features"
+	"github.com/slow-craft/nautilus-core/log"
 
 	"github.com/metacubex/sing-tun"
 )

@@ -7,9 +7,9 @@ import (
 	"net/netip"
 	"strconv"
 
-	"github.com/metacubex/mihomo/component/resolver"
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/transport/socks5"
+	"github.com/slow-craft/nautilus-core/component/resolver"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/transport/socks5"
 )
 
 func serializesSocksAddr(metadata *C.Metadata) []byte {

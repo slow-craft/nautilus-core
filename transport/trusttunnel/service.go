@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/common/httputils"
-	N "github.com/metacubex/mihomo/common/net"
+	"github.com/slow-craft/nautilus-core/common/httputils"
+	N "github.com/slow-craft/nautilus-core/common/net"
 
 	"github.com/metacubex/http"
 	"github.com/metacubex/quic-go/http3"

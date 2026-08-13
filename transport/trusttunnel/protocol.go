@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/common/httputils"
-	C "github.com/metacubex/mihomo/constant"
+	"github.com/slow-craft/nautilus-core/common/httputils"
+	C "github.com/slow-craft/nautilus-core/constant"
 )
 
 const (

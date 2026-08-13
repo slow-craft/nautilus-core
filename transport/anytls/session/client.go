@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/metacubex/mihomo/transport/anytls/padding"
-	"github.com/metacubex/mihomo/transport/anytls/skiplist"
-	"github.com/metacubex/mihomo/transport/anytls/util"
+	"github.com/slow-craft/nautilus-core/transport/anytls/padding"
+	"github.com/slow-craft/nautilus-core/transport/anytls/skiplist"
+	"github.com/slow-craft/nautilus-core/transport/anytls/util"
 )
 
 type Client struct {

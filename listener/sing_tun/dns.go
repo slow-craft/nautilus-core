@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/component/resolver"
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/listener/sing"
-	"github.com/metacubex/mihomo/log"
+	"github.com/slow-craft/nautilus-core/component/resolver"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/listener/sing"
+	"github.com/slow-craft/nautilus-core/log"
 
 	"github.com/metacubex/sing/common/buf"
 	"github.com/metacubex/sing/common/bufio"

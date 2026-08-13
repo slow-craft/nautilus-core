@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/metacubex/mihomo/common/utils"
-	"github.com/metacubex/mihomo/constant/features"
+	"github.com/slow-craft/nautilus-core/common/utils"
+	"github.com/slow-craft/nautilus-core/constant/features"
 )
 
 const Name = "mihomo"

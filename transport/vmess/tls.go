@@ -5,13 +5,13 @@ import (
 	"errors"
 	"net"
 
-	"github.com/metacubex/mihomo/component/ca"
-	"github.com/metacubex/mihomo/component/ech"
-	tlsC "github.com/metacubex/mihomo/component/tls"
-	"github.com/metacubex/mihomo/transport/jls"
-	"github.com/metacubex/mihomo/transport/restls"
-	"github.com/metacubex/mihomo/transport/shadowtls"
-	"github.com/metacubex/mihomo/transport/tlsmirror"
+	"github.com/slow-craft/nautilus-core/component/ca"
+	"github.com/slow-craft/nautilus-core/component/ech"
+	tlsC "github.com/slow-craft/nautilus-core/component/tls"
+	"github.com/slow-craft/nautilus-core/transport/jls"
+	"github.com/slow-craft/nautilus-core/transport/restls"
+	"github.com/slow-craft/nautilus-core/transport/shadowtls"
+	"github.com/slow-craft/nautilus-core/transport/tlsmirror"
 
 	"github.com/metacubex/tls"
 )

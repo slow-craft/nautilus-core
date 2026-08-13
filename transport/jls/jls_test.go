@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	N "github.com/metacubex/mihomo/common/net"
-	"github.com/metacubex/mihomo/component/ca"
+	N "github.com/slow-craft/nautilus-core/common/net"
+	"github.com/slow-craft/nautilus-core/component/ca"
 
 	"github.com/metacubex/http"
 	"github.com/metacubex/http/httptest"

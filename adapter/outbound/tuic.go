@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/metacubex/mihomo/component/ca"
-	"github.com/metacubex/mihomo/component/ech"
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/transport/tuic"
-	"github.com/metacubex/mihomo/transport/tuic/common"
+	"github.com/slow-craft/nautilus-core/component/ca"
+	"github.com/slow-craft/nautilus-core/component/ech"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/transport/tuic"
+	"github.com/slow-craft/nautilus-core/transport/tuic/common"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/metacubex/quic-go"

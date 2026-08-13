@@ -4,10 +4,10 @@ import (
 	"context"
 	"net"
 
-	"github.com/metacubex/mihomo/common/sockopt"
-	"github.com/metacubex/mihomo/component/resolver"
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/log"
+	"github.com/slow-craft/nautilus-core/common/sockopt"
+	"github.com/slow-craft/nautilus-core/component/resolver"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/log"
 
 	D "github.com/miekg/dns"
 )

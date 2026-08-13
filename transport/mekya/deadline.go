@@ -3,7 +3,7 @@ package mekya
 import (
 	"time"
 
-	"github.com/metacubex/mihomo/common/net/deadline"
+	"github.com/slow-craft/nautilus-core/common/net/deadline"
 )
 
 type pipeDeadlines struct {

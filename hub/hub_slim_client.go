@@ -3,8 +3,8 @@
 package hub
 
 import (
-	"github.com/metacubex/mihomo/config"
-	"github.com/metacubex/mihomo/hub/executor"
+	"github.com/slow-craft/nautilus-core/config"
+	"github.com/slow-craft/nautilus-core/hub/executor"
 )
 
 type Option func(*config.Config)

@@ -4,9 +4,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/metacubex/mihomo/common/atomic"
-	"github.com/metacubex/mihomo/common/xsync"
-	"github.com/metacubex/mihomo/component/memory"
+	"github.com/slow-craft/nautilus-core/common/atomic"
+	"github.com/slow-craft/nautilus-core/common/xsync"
+	"github.com/slow-craft/nautilus-core/component/memory"
 )
 
 var DefaultManager *Manager

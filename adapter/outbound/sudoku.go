@@ -10,10 +10,10 @@ import (
 	"strings"
 	"sync"
 
-	N "github.com/metacubex/mihomo/common/net"
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/transport/sudoku"
-	"github.com/metacubex/mihomo/transport/sudoku/obfs/httpmask"
+	N "github.com/slow-craft/nautilus-core/common/net"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/transport/sudoku"
+	"github.com/slow-craft/nautilus-core/transport/sudoku/obfs/httpmask"
 )
 
 type Sudoku struct {

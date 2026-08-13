@@ -3,9 +3,9 @@ package config
 import (
 	"encoding/json"
 
-	"github.com/metacubex/mihomo/listener/reality"
-	"github.com/metacubex/mihomo/listener/sing"
-	"github.com/metacubex/mihomo/transport/tlsmirror"
+	"github.com/slow-craft/nautilus-core/listener/reality"
+	"github.com/slow-craft/nautilus-core/listener/sing"
+	"github.com/slow-craft/nautilus-core/transport/tlsmirror"
 )
 
 type VmessUser struct {

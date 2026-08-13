@@ -1,6 +1,6 @@
 package outbound
 
-import "github.com/metacubex/mihomo/transport/tlsmirror"
+import "github.com/slow-craft/nautilus-core/transport/tlsmirror"
 
 type TLSMirrorOptions struct {
 	PrimaryKey                    string                         `proxy:"primary-key,omitempty"`

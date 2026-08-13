@@ -5,11 +5,11 @@ import (
 	"net/netip"
 	"testing"
 
-	"github.com/metacubex/mihomo/adapter/outbound"
-	"github.com/metacubex/mihomo/listener/inbound"
-	"github.com/metacubex/mihomo/transport/jls"
-	"github.com/metacubex/mihomo/transport/restls"
-	"github.com/metacubex/mihomo/transport/shadowtls"
+	"github.com/slow-craft/nautilus-core/adapter/outbound"
+	"github.com/slow-craft/nautilus-core/listener/inbound"
+	"github.com/slow-craft/nautilus-core/transport/jls"
+	"github.com/slow-craft/nautilus-core/transport/restls"
+	"github.com/slow-craft/nautilus-core/transport/shadowtls"
 
 	"github.com/stretchr/testify/assert"
 )

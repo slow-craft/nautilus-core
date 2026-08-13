@@ -7,7 +7,7 @@ import (
 	"net/netip"
 	"testing"
 
-	"github.com/metacubex/mihomo/constant"
+	"github.com/slow-craft/nautilus-core/constant"
 	"github.com/stretchr/testify/assert"
 )
 

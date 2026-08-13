@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	N "github.com/metacubex/mihomo/common/net"
-	"github.com/metacubex/mihomo/common/utils"
-	"github.com/metacubex/mihomo/component/dialer"
+	N "github.com/slow-craft/nautilus-core/common/net"
+	"github.com/slow-craft/nautilus-core/common/utils"
+	"github.com/slow-craft/nautilus-core/component/dialer"
 )
 
 // Adapter Type

@@ -4,7 +4,7 @@ import (
 	"context"
 	"math"
 
-	"github.com/metacubex/mihomo/component/resolver"
+	"github.com/slow-craft/nautilus-core/component/resolver"
 
 	"github.com/metacubex/chi"
 	"github.com/metacubex/chi/render"

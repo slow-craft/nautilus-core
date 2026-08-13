@@ -6,9 +6,9 @@ import (
 	"net"
 	"runtime"
 
-	"github.com/metacubex/mihomo/common/cmd"
-	"github.com/metacubex/mihomo/component/dialer"
-	"github.com/metacubex/mihomo/log"
+	"github.com/slow-craft/nautilus-core/common/cmd"
+	"github.com/slow-craft/nautilus-core/component/dialer"
+	"github.com/slow-craft/nautilus-core/log"
 )
 
 var (

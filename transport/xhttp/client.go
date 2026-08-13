@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/common/contextutils"
-	"github.com/metacubex/mihomo/common/httputils"
+	"github.com/slow-craft/nautilus-core/common/contextutils"
+	"github.com/slow-craft/nautilus-core/common/httputils"
 
 	"github.com/metacubex/http"
 	"github.com/metacubex/http/httptrace"

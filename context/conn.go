@@ -1,11 +1,11 @@
 package context
 
 import (
-	"github.com/metacubex/mihomo/common/utils"
+	"github.com/slow-craft/nautilus-core/common/utils"
 	"net"
 
-	N "github.com/metacubex/mihomo/common/net"
-	C "github.com/metacubex/mihomo/constant"
+	N "github.com/slow-craft/nautilus-core/common/net"
+	C "github.com/slow-craft/nautilus-core/constant"
 
 	"github.com/gofrs/uuid/v5"
 )

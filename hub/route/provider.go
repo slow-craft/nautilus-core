@@ -3,9 +3,9 @@ package route
 import (
 	"context"
 
-	C "github.com/metacubex/mihomo/constant"
-	P "github.com/metacubex/mihomo/constant/provider"
-	"github.com/metacubex/mihomo/tunnel"
+	C "github.com/slow-craft/nautilus-core/constant"
+	P "github.com/slow-craft/nautilus-core/constant/provider"
+	"github.com/slow-craft/nautilus-core/tunnel"
 
 	"github.com/metacubex/chi"
 	"github.com/metacubex/chi/render"

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	C "github.com/metacubex/mihomo/constant"
+	C "github.com/slow-craft/nautilus-core/constant"
 
 	"golang.org/x/exp/slices"
 )

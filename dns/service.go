@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/metacubex/mihomo/component/resolver"
-	icontext "github.com/metacubex/mihomo/context"
 	D "github.com/miekg/dns"
+	"github.com/slow-craft/nautilus-core/component/resolver"
+	icontext "github.com/slow-craft/nautilus-core/context"
 )
 
 type Service struct {

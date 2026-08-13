@@ -8,9 +8,9 @@ import (
 	"net"
 	"strings"
 
-	"github.com/metacubex/mihomo/common/pool"
-	"github.com/metacubex/mihomo/ntp"
-	"github.com/metacubex/mihomo/transport/ssr/tools"
+	"github.com/slow-craft/nautilus-core/common/pool"
+	"github.com/slow-craft/nautilus-core/ntp"
+	"github.com/slow-craft/nautilus-core/transport/ssr/tools"
 
 	"github.com/metacubex/randv2"
 )

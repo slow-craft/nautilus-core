@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/common/atomic"
-	mihomoHttp "github.com/metacubex/mihomo/component/http"
-	"github.com/metacubex/mihomo/component/mmdb"
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/log"
+	"github.com/slow-craft/nautilus-core/common/atomic"
+	mihomoHttp "github.com/slow-craft/nautilus-core/component/http"
+	"github.com/slow-craft/nautilus-core/component/mmdb"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/log"
 
 	"github.com/metacubex/http"
 )

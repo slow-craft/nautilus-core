@@ -3,9 +3,9 @@ package adapter
 import (
 	"fmt"
 
-	"github.com/metacubex/mihomo/adapter/outbound"
-	"github.com/metacubex/mihomo/common/structure"
-	C "github.com/metacubex/mihomo/constant"
+	"github.com/slow-craft/nautilus-core/adapter/outbound"
+	"github.com/slow-craft/nautilus-core/common/structure"
+	C "github.com/slow-craft/nautilus-core/constant"
 )
 
 func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error) {

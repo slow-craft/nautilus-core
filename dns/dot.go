@@ -3,15 +3,15 @@ package dns
 import (
 	"context"
 	"fmt"
-	"github.com/metacubex/mihomo/component/resolver"
+	"github.com/slow-craft/nautilus-core/component/resolver"
 	"net"
 	"runtime"
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/common/deque"
-	"github.com/metacubex/mihomo/component/ca"
-	C "github.com/metacubex/mihomo/constant"
+	"github.com/slow-craft/nautilus-core/common/deque"
+	"github.com/slow-craft/nautilus-core/component/ca"
+	C "github.com/slow-craft/nautilus-core/constant"
 
 	"github.com/metacubex/tls"
 	D "github.com/miekg/dns"
