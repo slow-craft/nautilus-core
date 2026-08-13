@@ -21,6 +21,12 @@ func WithExternalController(externalController string) Option {
 	}
 }
 
+func WithExternalControllerTLS(externalControllerTLS string) Option {
+	return func(cfg *config.Config) {
+		cfg.Controller.ExternalControllerTLS = externalControllerTLS
+	}
+}
+
 func WithExternalControllerUnix(externalControllerUnix string) Option {
 	return func(cfg *config.Config) {
 		cfg.Controller.ExternalControllerUnix = externalControllerUnix
@@ -30,6 +36,12 @@ func WithExternalControllerUnix(externalControllerUnix string) Option {
 func WithExternalControllerPipe(externalControllerPipe string) Option {
 	return func(cfg *config.Config) {
 		cfg.Controller.ExternalControllerPipe = externalControllerPipe
+	}
+}
+
+func WithExternalControllerRoutingMark(externalControllerRoutingMark int) Option {
+	return func(cfg *config.Config) {
+		cfg.Controller.ExternalControllerRoutingMark = externalControllerRoutingMark
 	}
 }
 
