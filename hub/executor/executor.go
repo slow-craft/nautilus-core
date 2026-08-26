@@ -11,35 +11,35 @@ import (
 	"time"
 	_ "unsafe"
 
-	"github.com/slow-craft/nautilus-core/adapter"
-	"github.com/slow-craft/nautilus-core/adapter/inbound"
-	"github.com/slow-craft/nautilus-core/adapter/outboundgroup"
-	"github.com/slow-craft/nautilus-core/component/auth"
-	"github.com/slow-craft/nautilus-core/component/ca"
-	"github.com/slow-craft/nautilus-core/component/dialer"
-	"github.com/slow-craft/nautilus-core/component/geodata"
-	mihomoHttp "github.com/slow-craft/nautilus-core/component/http"
-	"github.com/slow-craft/nautilus-core/component/iface"
-	"github.com/slow-craft/nautilus-core/component/keepalive"
-	"github.com/slow-craft/nautilus-core/component/profile"
-	"github.com/slow-craft/nautilus-core/component/profile/cachefile"
-	"github.com/slow-craft/nautilus-core/component/resolver"
-	"github.com/slow-craft/nautilus-core/component/resource"
-	"github.com/slow-craft/nautilus-core/component/sniffer"
-	"github.com/slow-craft/nautilus-core/component/trie"
-	"github.com/slow-craft/nautilus-core/component/updater"
-	"github.com/slow-craft/nautilus-core/config"
-	C "github.com/slow-craft/nautilus-core/constant"
-	P "github.com/slow-craft/nautilus-core/constant/provider"
-	"github.com/slow-craft/nautilus-core/dns"
-	"github.com/slow-craft/nautilus-core/listener"
-	authStore "github.com/slow-craft/nautilus-core/listener/auth"
-	LC "github.com/slow-craft/nautilus-core/listener/config"
-	"github.com/slow-craft/nautilus-core/listener/inner"
-	"github.com/slow-craft/nautilus-core/listener/tproxy"
-	"github.com/slow-craft/nautilus-core/log"
-	"github.com/slow-craft/nautilus-core/ntp/ntp"
-	"github.com/slow-craft/nautilus-core/tunnel"
+	"github.com/metacubex/mihomo/adapter"
+	"github.com/metacubex/mihomo/adapter/inbound"
+	"github.com/metacubex/mihomo/adapter/outboundgroup"
+	"github.com/metacubex/mihomo/component/auth"
+	"github.com/metacubex/mihomo/component/ca"
+	"github.com/metacubex/mihomo/component/dialer"
+	"github.com/metacubex/mihomo/component/geodata"
+	mihomoHttp "github.com/metacubex/mihomo/component/http"
+	"github.com/metacubex/mihomo/component/iface"
+	"github.com/metacubex/mihomo/component/keepalive"
+	"github.com/metacubex/mihomo/component/profile"
+	"github.com/metacubex/mihomo/component/profile/cachefile"
+	"github.com/metacubex/mihomo/component/resolver"
+	"github.com/metacubex/mihomo/component/resource"
+	"github.com/metacubex/mihomo/component/sniffer"
+	"github.com/metacubex/mihomo/component/trie"
+	"github.com/metacubex/mihomo/component/updater"
+	"github.com/metacubex/mihomo/config"
+	C "github.com/metacubex/mihomo/constant"
+	P "github.com/metacubex/mihomo/constant/provider"
+	"github.com/metacubex/mihomo/dns"
+	"github.com/metacubex/mihomo/listener"
+	authStore "github.com/metacubex/mihomo/listener/auth"
+	LC "github.com/metacubex/mihomo/listener/config"
+	"github.com/metacubex/mihomo/listener/inner"
+	"github.com/metacubex/mihomo/listener/tproxy"
+	"github.com/metacubex/mihomo/log"
+	"github.com/metacubex/mihomo/ntp/ntp"
+	"github.com/metacubex/mihomo/tunnel"
 )
 
 var mux sync.Mutex
@@ -381,7 +381,7 @@ func updateUpdater(cfg *config.Config) {
 	updater.DefaultUiUpdater.AutoDownloadUI()
 }
 
-//go:linkname temporaryUpdateGeneral github.com/slow-craft/nautilus-core/config.temporaryUpdateGeneral
+//go:linkname temporaryUpdateGeneral github.com/metacubex/mihomo/config.temporaryUpdateGeneral
 func temporaryUpdateGeneral(general *config.General) func() {
 	oldGeneral := GetGeneral()
 	updateGeneral(general, false)

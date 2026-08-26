@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	// https://github.com/golang/go/wiki/CodeReviewComments#import-dot
-	. "github.com/slow-craft/nautilus-core/rules/logic"
+	. "github.com/metacubex/mihomo/rules/logic"
 
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/rules"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/rules"
 
 	"github.com/stretchr/testify/assert"
 )

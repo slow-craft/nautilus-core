@@ -3,8 +3,8 @@ package fakeip
 import (
 	"testing"
 
-	"github.com/slow-craft/nautilus-core/component/trie"
-	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/metacubex/mihomo/component/trie"
+	C "github.com/metacubex/mihomo/constant"
 
 	"github.com/stretchr/testify/assert"
 )

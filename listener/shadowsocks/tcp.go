@@ -6,17 +6,17 @@ import (
 	"net"
 	"strings"
 
-	"github.com/slow-craft/nautilus-core/adapter/inbound"
-	N "github.com/slow-craft/nautilus-core/common/net"
-	C "github.com/slow-craft/nautilus-core/constant"
-	LC "github.com/slow-craft/nautilus-core/listener/config"
-	"github.com/slow-craft/nautilus-core/listener/jls"
-	"github.com/slow-craft/nautilus-core/listener/restls"
-	"github.com/slow-craft/nautilus-core/listener/shadowtls"
-	"github.com/slow-craft/nautilus-core/listener/sing"
-	"github.com/slow-craft/nautilus-core/transport/shadowsocks/core"
-	obfs "github.com/slow-craft/nautilus-core/transport/simple-obfs"
-	"github.com/slow-craft/nautilus-core/transport/socks5"
+	"github.com/metacubex/mihomo/adapter/inbound"
+	N "github.com/metacubex/mihomo/common/net"
+	C "github.com/metacubex/mihomo/constant"
+	LC "github.com/metacubex/mihomo/listener/config"
+	"github.com/metacubex/mihomo/listener/jls"
+	"github.com/metacubex/mihomo/listener/restls"
+	"github.com/metacubex/mihomo/listener/shadowtls"
+	"github.com/metacubex/mihomo/listener/sing"
+	"github.com/metacubex/mihomo/transport/shadowsocks/core"
+	obfs "github.com/metacubex/mihomo/transport/simple-obfs"
+	"github.com/metacubex/mihomo/transport/socks5"
 )
 
 type Listener struct {

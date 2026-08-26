@@ -1,6 +1,6 @@
 package outbound
 
-import "github.com/slow-craft/nautilus-core/transport/jls"
+import "github.com/metacubex/mihomo/transport/jls"
 
 type JLSOptions struct {
 	Username string `proxy:"username"`

@@ -3,9 +3,9 @@ package redir
 import (
 	"net"
 
-	"github.com/slow-craft/nautilus-core/adapter/inbound"
-	"github.com/slow-craft/nautilus-core/component/keepalive"
-	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/metacubex/mihomo/adapter/inbound"
+	"github.com/metacubex/mihomo/component/keepalive"
+	C "github.com/metacubex/mihomo/constant"
 )
 
 type Listener struct {

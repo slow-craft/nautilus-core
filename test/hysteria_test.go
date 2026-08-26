@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/slow-craft/nautilus-core/adapter/outbound"
-	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/metacubex/mihomo/adapter/outbound"
+	C "github.com/metacubex/mihomo/constant"
 	"github.com/stretchr/testify/assert"
 )
 

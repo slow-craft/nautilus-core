@@ -8,12 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/adapter/outbound"
-	"github.com/slow-craft/nautilus-core/common/atomic"
-	"github.com/slow-craft/nautilus-core/common/utils"
-	C "github.com/slow-craft/nautilus-core/constant"
-	P "github.com/slow-craft/nautilus-core/constant/provider"
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/adapter/outbound"
+	"github.com/metacubex/mihomo/common/atomic"
+	"github.com/metacubex/mihomo/common/utils"
+	C "github.com/metacubex/mihomo/constant"
+	P "github.com/metacubex/mihomo/constant/provider"
+	"github.com/metacubex/mihomo/log"
 
 	"github.com/dlclark/regexp2"
 	"golang.org/x/exp/slices"

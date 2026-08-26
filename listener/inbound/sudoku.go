@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	C "github.com/slow-craft/nautilus-core/constant"
-	LC "github.com/slow-craft/nautilus-core/listener/config"
-	"github.com/slow-craft/nautilus-core/listener/sudoku"
-	"github.com/slow-craft/nautilus-core/log"
+	C "github.com/metacubex/mihomo/constant"
+	LC "github.com/metacubex/mihomo/listener/config"
+	"github.com/metacubex/mihomo/listener/sudoku"
+	"github.com/metacubex/mihomo/log"
 )
 
 type SudokuOption struct {

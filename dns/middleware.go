@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/lru"
-	"github.com/slow-craft/nautilus-core/component/fakeip"
-	"github.com/slow-craft/nautilus-core/component/resolver"
-	C "github.com/slow-craft/nautilus-core/constant"
-	icontext "github.com/slow-craft/nautilus-core/context"
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/common/lru"
+	"github.com/metacubex/mihomo/component/fakeip"
+	"github.com/metacubex/mihomo/component/resolver"
+	C "github.com/metacubex/mihomo/constant"
+	icontext "github.com/metacubex/mihomo/context"
+	"github.com/metacubex/mihomo/log"
 
 	D "github.com/miekg/dns"
 )

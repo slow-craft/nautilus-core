@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/slow-craft/nautilus-core/adapter/inbound"
-	"github.com/slow-craft/nautilus-core/common/utils"
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/listener/mieru"
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/adapter/inbound"
+	"github.com/metacubex/mihomo/common/utils"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/listener/mieru"
+	"github.com/metacubex/mihomo/log"
 	"google.golang.org/protobuf/proto"
 
 	mieruserver "github.com/enfein/mieru/v3/apis/server"

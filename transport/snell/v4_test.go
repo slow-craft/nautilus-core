@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/transport/shadowsocks/shadowaead"
-	"github.com/slow-craft/nautilus-core/transport/socks5"
+	"github.com/metacubex/mihomo/transport/shadowsocks/shadowaead"
+	"github.com/metacubex/mihomo/transport/socks5"
 )
 
 func TestSnellV4RoundTrip(t *testing.T) {

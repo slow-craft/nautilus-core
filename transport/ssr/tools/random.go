@@ -3,7 +3,7 @@ package tools
 import (
 	"encoding/binary"
 
-	"github.com/slow-craft/nautilus-core/common/pool"
+	"github.com/metacubex/mihomo/common/pool"
 )
 
 // XorShift128Plus - a pseudorandom number generator

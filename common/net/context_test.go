@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	N "github.com/slow-craft/nautilus-core/common/net"
+	N "github.com/metacubex/mihomo/common/net"
 
 	"github.com/stretchr/testify/assert"
 )

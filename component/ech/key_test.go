@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/slow-craft/nautilus-core/component/ech/echparser"
+	"github.com/metacubex/mihomo/component/ech/echparser"
 )
 
 func TestGenECHConfig(t *testing.T) {

@@ -3,7 +3,7 @@ package age_test
 import (
 	"testing"
 
-	"github.com/slow-craft/nautilus-core/component/age"
+	"github.com/metacubex/mihomo/component/age"
 )
 
 func TestAge(t *testing.T) {

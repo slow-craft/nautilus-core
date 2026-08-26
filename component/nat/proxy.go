@@ -3,8 +3,8 @@ package nat
 import (
 	"net"
 
-	"github.com/slow-craft/nautilus-core/common/atomic"
-	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/metacubex/mihomo/common/atomic"
+	C "github.com/metacubex/mihomo/constant"
 )
 
 type writeBackProxy struct {

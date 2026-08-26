@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/slow-craft/nautilus-core/adapter/outbound"
+	"github.com/metacubex/mihomo/adapter/outbound"
 )
 
 func TestSlimClientRejectsExcludedOutboundTypes(t *testing.T) {

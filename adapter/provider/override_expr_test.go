@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/slow-craft/nautilus-core/common/structure"
+	"github.com/metacubex/mihomo/common/structure"
 )
 
 func mustOverrideExprs(t *testing.T, sources ...string) []OverrideExpr {

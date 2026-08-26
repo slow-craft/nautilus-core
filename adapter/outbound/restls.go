@@ -1,6 +1,6 @@
 package outbound
 
-import "github.com/slow-craft/nautilus-core/transport/restls"
+import "github.com/metacubex/mihomo/transport/restls"
 
 type RestlsOptions struct {
 	Password     string `proxy:"password,omitempty"`

@@ -1,6 +1,6 @@
 package inbound
 
-import "github.com/slow-craft/nautilus-core/listener/reality"
+import "github.com/metacubex/mihomo/listener/reality"
 
 type RealityConfig struct {
 	Dest              string   `inbound:"dest"`

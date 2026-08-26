@@ -4,8 +4,8 @@ import (
 	"context"
 	"net"
 
-	"github.com/slow-craft/nautilus-core/component/ca"
-	"github.com/slow-craft/nautilus-core/ntp"
+	"github.com/metacubex/mihomo/component/ca"
+	"github.com/metacubex/mihomo/ntp"
 
 	tls "github.com/metacubex/restls-client-go"
 )

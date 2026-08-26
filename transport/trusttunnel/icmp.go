@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"net/netip"
 
-	"github.com/slow-craft/nautilus-core/common/buf"
+	"github.com/metacubex/mihomo/common/buf"
 )
 
 type IcmpConn struct {

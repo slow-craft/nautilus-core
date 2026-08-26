@@ -4,8 +4,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/slow-craft/nautilus-core/common/buf"
-	"github.com/slow-craft/nautilus-core/common/once"
+	"github.com/metacubex/mihomo/common/buf"
+	"github.com/metacubex/mihomo/common/once"
 )
 
 type earlyConn struct {

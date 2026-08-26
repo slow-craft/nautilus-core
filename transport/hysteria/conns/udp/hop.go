@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/transport/hysteria/obfs"
-	"github.com/slow-craft/nautilus-core/transport/hysteria/utils"
+	"github.com/metacubex/mihomo/transport/hysteria/obfs"
+	"github.com/metacubex/mihomo/transport/hysteria/utils"
 
 	"github.com/metacubex/randv2"
 )

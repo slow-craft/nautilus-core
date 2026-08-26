@@ -9,10 +9,10 @@ import (
 	"encoding/binary"
 	"sync"
 
-	"github.com/slow-craft/nautilus-core/common/pool"
-	"github.com/slow-craft/nautilus-core/log"
-	"github.com/slow-craft/nautilus-core/ntp"
-	"github.com/slow-craft/nautilus-core/transport/shadowsocks/core"
+	"github.com/metacubex/mihomo/common/pool"
+	"github.com/metacubex/mihomo/log"
+	"github.com/metacubex/mihomo/ntp"
+	"github.com/metacubex/mihomo/transport/shadowsocks/core"
 
 	"github.com/metacubex/randv2"
 )

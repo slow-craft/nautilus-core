@@ -4,7 +4,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	C "github.com/slow-craft/nautilus-core/constant"
+	C "github.com/metacubex/mihomo/constant"
 )
 
 type RuleWrapper struct {

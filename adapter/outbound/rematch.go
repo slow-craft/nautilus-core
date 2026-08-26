@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	C "github.com/slow-craft/nautilus-core/constant"
+	C "github.com/metacubex/mihomo/constant"
 )
 
 type Rematch struct {

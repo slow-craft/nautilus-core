@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/utils"
-	"github.com/slow-craft/nautilus-core/component/ca"
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/ntp"
-	"github.com/slow-craft/nautilus-core/transport/shadowquic"
-	"github.com/slow-craft/nautilus-core/transport/tuic"
+	"github.com/metacubex/mihomo/common/utils"
+	"github.com/metacubex/mihomo/component/ca"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/ntp"
+	"github.com/metacubex/mihomo/transport/shadowquic"
+	"github.com/metacubex/mihomo/transport/tuic"
 
 	"github.com/metacubex/jls-quic-go"
 	"github.com/metacubex/jls-tls"

@@ -1,10 +1,10 @@
 package common
 
 import (
-	"github.com/slow-craft/nautilus-core/component/geodata"
-	"github.com/slow-craft/nautilus-core/component/mmdb"
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/component/geodata"
+	"github.com/metacubex/mihomo/component/mmdb"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/log"
 )
 
 type ASN struct {

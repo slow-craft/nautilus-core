@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/slow-craft/nautilus-core/adapter/inbound"
-	"github.com/slow-craft/nautilus-core/common/utils"
-	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/metacubex/mihomo/adapter/inbound"
+	"github.com/metacubex/mihomo/common/utils"
+	C "github.com/metacubex/mihomo/constant"
 )
 
 type Base struct {

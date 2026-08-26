@@ -6,12 +6,12 @@ import (
 	"errors"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/callback"
-	N "github.com/slow-craft/nautilus-core/common/net"
-	"github.com/slow-craft/nautilus-core/common/singledo"
-	"github.com/slow-craft/nautilus-core/common/utils"
-	C "github.com/slow-craft/nautilus-core/constant"
-	P "github.com/slow-craft/nautilus-core/constant/provider"
+	"github.com/metacubex/mihomo/common/callback"
+	N "github.com/metacubex/mihomo/common/net"
+	"github.com/metacubex/mihomo/common/singledo"
+	"github.com/metacubex/mihomo/common/utils"
+	C "github.com/metacubex/mihomo/constant"
+	P "github.com/metacubex/mihomo/constant/provider"
 )
 
 type URLTestOption struct {

@@ -7,8 +7,8 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/buf"
-	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/metacubex/mihomo/common/buf"
+	C "github.com/metacubex/mihomo/constant"
 )
 
 type Reject struct {

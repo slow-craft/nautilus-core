@@ -11,7 +11,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/slow-craft/nautilus-core/common/yaml"
+	"github.com/metacubex/mihomo/common/yaml"
 )
 
 // OverrideExpr is an update-oriented subset of yq expressions for modifying a single proxy provider mapping.

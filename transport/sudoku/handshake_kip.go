@@ -7,7 +7,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/transport/sudoku/crypto"
+	"github.com/metacubex/mihomo/transport/sudoku/crypto"
 )
 
 const kipHandshakeSkew = 60 * time.Second

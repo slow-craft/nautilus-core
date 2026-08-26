@@ -1,8 +1,8 @@
 package inbound
 
 import (
-	"github.com/slow-craft/nautilus-core/common/utils"
-	LC "github.com/slow-craft/nautilus-core/listener/config"
+	"github.com/metacubex/mihomo/common/utils"
+	LC "github.com/metacubex/mihomo/listener/config"
 )
 
 type JLSConfig struct {

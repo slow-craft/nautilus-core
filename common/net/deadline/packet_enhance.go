@@ -5,7 +5,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/slow-craft/nautilus-core/common/net/packet"
+	"github.com/metacubex/mihomo/common/net/packet"
 )
 
 type EnhancePacketConn struct {

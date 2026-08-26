@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	N "github.com/slow-craft/nautilus-core/common/net"
-	C "github.com/slow-craft/nautilus-core/constant"
+	N "github.com/metacubex/mihomo/common/net"
+	C "github.com/metacubex/mihomo/constant"
 
 	"github.com/stretchr/testify/require"
 )

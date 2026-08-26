@@ -3,7 +3,7 @@ package sudoku
 import (
 	"strings"
 
-	"github.com/slow-craft/nautilus-core/transport/sudoku/obfs/sudoku"
+	"github.com/metacubex/mihomo/transport/sudoku/obfs/sudoku"
 )
 
 func normalizeCustomPatterns(customTable string, customTables []string) []string {

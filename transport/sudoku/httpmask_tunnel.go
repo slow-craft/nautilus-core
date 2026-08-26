@@ -6,7 +6,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/slow-craft/nautilus-core/transport/sudoku/obfs/httpmask"
+	"github.com/metacubex/mihomo/transport/sudoku/obfs/httpmask"
 )
 
 type HTTPMaskTunnelServer struct {

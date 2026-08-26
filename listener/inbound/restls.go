@@ -1,7 +1,7 @@
 package inbound
 
 import (
-	LC "github.com/slow-craft/nautilus-core/listener/config"
+	LC "github.com/metacubex/mihomo/listener/config"
 )
 
 type ResTLS struct {

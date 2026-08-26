@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/contextutils"
+	"github.com/metacubex/mihomo/common/contextutils"
 )
 
 type MultiplexBaseDialer func(context.Context) (net.Conn, error)

@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	N "github.com/slow-craft/nautilus-core/common/net"
-	"github.com/slow-craft/nautilus-core/component/ca"
-	"github.com/slow-craft/nautilus-core/ntp"
+	N "github.com/metacubex/mihomo/common/net"
+	"github.com/metacubex/mihomo/component/ca"
+	"github.com/metacubex/mihomo/ntp"
 
 	tls "github.com/metacubex/jls-tls"
 )

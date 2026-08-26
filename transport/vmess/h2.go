@@ -7,7 +7,7 @@ import (
 	"net"
 	"net/url"
 
-	N "github.com/slow-craft/nautilus-core/common/net"
+	N "github.com/metacubex/mihomo/common/net"
 
 	"github.com/metacubex/http"
 	"github.com/metacubex/randv2"

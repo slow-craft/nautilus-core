@@ -12,7 +12,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/log"
 )
 
 type hashReadConn struct {

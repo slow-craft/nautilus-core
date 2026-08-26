@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/component/dialer"
-	"github.com/slow-craft/nautilus-core/component/proxydialer"
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/log"
-	mihomoNtp "github.com/slow-craft/nautilus-core/ntp"
+	"github.com/metacubex/mihomo/component/dialer"
+	"github.com/metacubex/mihomo/component/proxydialer"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/log"
+	mihomoNtp "github.com/metacubex/mihomo/ntp"
 
 	M "github.com/metacubex/sing/common/metadata"
 	"github.com/metacubex/sing/common/ntp"

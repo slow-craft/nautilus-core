@@ -12,12 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/contextutils"
-	"github.com/slow-craft/nautilus-core/common/pool"
-	"github.com/slow-craft/nautilus-core/component/ca"
-	"github.com/slow-craft/nautilus-core/component/resolver"
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/common/contextutils"
+	"github.com/metacubex/mihomo/common/pool"
+	"github.com/metacubex/mihomo/component/ca"
+	"github.com/metacubex/mihomo/component/resolver"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/log"
 
 	"github.com/metacubex/quic-go"
 	"github.com/metacubex/tls"

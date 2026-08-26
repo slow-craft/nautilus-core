@@ -10,8 +10,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/transport/sudoku/crypto"
-	"github.com/slow-craft/nautilus-core/transport/sudoku/obfs/sudoku"
+	"github.com/metacubex/mihomo/transport/sudoku/crypto"
+	"github.com/metacubex/mihomo/transport/sudoku/obfs/sudoku"
 )
 
 type clientTableChoice struct {

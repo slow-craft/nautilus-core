@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/transport/mkcp"
+	"github.com/metacubex/mihomo/transport/mkcp"
 
 	"github.com/metacubex/http"
 )

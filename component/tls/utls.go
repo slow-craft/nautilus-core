@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/slow-craft/nautilus-core/common/once"
-	"github.com/slow-craft/nautilus-core/common/utils"
-	"github.com/slow-craft/nautilus-core/log"
+	"github.com/metacubex/mihomo/common/once"
+	"github.com/metacubex/mihomo/common/utils"
+	"github.com/metacubex/mihomo/log"
 
 	"github.com/metacubex/tls"
 	utls "github.com/metacubex/utls"

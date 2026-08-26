@@ -1,6 +1,6 @@
 package inbound
 
-import LC "github.com/slow-craft/nautilus-core/listener/config"
+import LC "github.com/metacubex/mihomo/listener/config"
 
 type MKCPConfig struct {
 	Enable           bool   `inbound:"enable,omitempty"`

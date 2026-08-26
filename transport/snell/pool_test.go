@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/transport/shadowsocks/shadowaead"
+	"github.com/metacubex/mihomo/transport/shadowsocks/shadowaead"
 )
 
 func TestPoolConnCloseIsIdempotent(t *testing.T) {

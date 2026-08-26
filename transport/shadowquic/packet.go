@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/net/deadline"
+	"github.com/metacubex/mihomo/common/net/deadline"
 
 	"github.com/metacubex/jls-quic-go"
 )

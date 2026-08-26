@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/slow-craft/nautilus-core/common/utils"
+	"github.com/metacubex/mihomo/common/utils"
 
 	"github.com/metacubex/http"
 	"github.com/metacubex/randv2"

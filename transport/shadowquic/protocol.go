@@ -8,8 +8,8 @@ import (
 	"net"
 	"net/netip"
 
-	C "github.com/slow-craft/nautilus-core/constant"
-	"github.com/slow-craft/nautilus-core/transport/socks5"
+	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/transport/socks5"
 )
 
 const (

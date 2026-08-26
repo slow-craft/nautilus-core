@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	tlsC "github.com/slow-craft/nautilus-core/component/tls"
+	tlsC "github.com/metacubex/mihomo/component/tls"
 )
 
 type RealityOptions struct {

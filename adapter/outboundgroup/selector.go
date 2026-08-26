@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	C "github.com/slow-craft/nautilus-core/constant"
-	P "github.com/slow-craft/nautilus-core/constant/provider"
+	C "github.com/metacubex/mihomo/constant"
+	P "github.com/metacubex/mihomo/constant/provider"
 )
 
 type SelectorOption struct {

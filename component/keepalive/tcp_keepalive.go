@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/atomic"
+	"github.com/metacubex/mihomo/common/atomic"
 )
 
 var (

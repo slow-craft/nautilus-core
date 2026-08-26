@@ -5,7 +5,7 @@ import (
 	"net"
 	"runtime"
 
-	"github.com/slow-craft/nautilus-core/common/utils"
+	"github.com/metacubex/mihomo/common/utils"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/metacubex/randv2"

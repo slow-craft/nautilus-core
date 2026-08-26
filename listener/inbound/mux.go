@@ -1,6 +1,6 @@
 package inbound
 
-import "github.com/slow-craft/nautilus-core/listener/sing"
+import "github.com/metacubex/mihomo/listener/sing"
 
 type MuxOption struct {
 	Padding bool          `inbound:"padding,omitempty"`

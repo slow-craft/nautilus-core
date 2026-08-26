@@ -9,7 +9,7 @@ import (
 	"net"
 	"time"
 
-	tlsC "github.com/slow-craft/nautilus-core/component/tls"
+	tlsC "github.com/metacubex/mihomo/component/tls"
 
 	"github.com/metacubex/tls"
 )

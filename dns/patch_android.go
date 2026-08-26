@@ -3,7 +3,7 @@
 package dns
 
 import (
-	"github.com/slow-craft/nautilus-core/component/resolver"
+	"github.com/metacubex/mihomo/component/resolver"
 )
 
 var systemResolver []dnsClient

@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/common/httputils"
+	"github.com/metacubex/mihomo/common/httputils"
 )
 
 type Conn struct {

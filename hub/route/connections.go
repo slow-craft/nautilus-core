@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/slow-craft/nautilus-core/tunnel/statistic"
+	"github.com/metacubex/mihomo/tunnel/statistic"
 
 	"github.com/metacubex/chi"
 	"github.com/metacubex/chi/render"

@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/slow-craft/nautilus-core/listener/sing"
+	"github.com/metacubex/mihomo/listener/sing"
 
 	"encoding/json"
 )
