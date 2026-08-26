@@ -1,4 +1,4 @@
-//go:build !no_zerotier
+//go:build !no_zerotier && !slim_client
 
 package outbound
 
