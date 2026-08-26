@@ -11,7 +11,7 @@ require (
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/golang/snappy v1.0.0
 	github.com/metacubex/age v0.0.0-20260603010618-28d156b4ea78
-	github.com/metacubex/amneziawg-go v0.0.0-20260612143004-19b4f1cdd5ec
+	github.com/metacubex/amneziawg-go v0.0.0-20260816073447-736a78668832
 	github.com/metacubex/bart v0.26.0
 	github.com/metacubex/bbolt v0.0.0-20260706163408-d4ec34ad7c48
 	github.com/metacubex/blake3 v0.1.0
@@ -27,6 +27,7 @@ require (
 	github.com/metacubex/jls-tls v0.0.0-20260716145614-4bf88db633e2
 	github.com/metacubex/kcp-go v0.0.0-20260105040817-550693377604
 	github.com/metacubex/mhurl v0.1.0
+	github.com/metacubex/mipstack v0.0.0-20260826102845-dc187ebcbdc7
 	github.com/metacubex/mlkem v0.1.0
 	github.com/metacubex/quic-go v0.59.1-0.20260606115121-0662b57ad5bf
 	github.com/metacubex/randv2 v0.2.0
@@ -47,6 +48,7 @@ require (
 	github.com/metacubex/tls v0.1.7
 	github.com/metacubex/utls v1.8.7
 	github.com/metacubex/wireguard-go v0.0.0-20250820062549-a6cecdd7f57f
+	github.com/metacubex/zerotier-go v0.0.0-20260813124750-13fa6f45da5f
 	github.com/mroth/weightedrand/v2 v2.1.0
 	github.com/openacid/low v0.1.21
 	github.com/rasky/go-lzo v0.0.0-20200203143853-96a758eda86e
