@@ -4,9 +4,9 @@ import (
 	"context"
 	"net"
 
-	"github.com/metacubex/mihomo/component/ca"
-	"github.com/metacubex/mihomo/component/ech"
-	"github.com/metacubex/mihomo/transport/vmess"
+	"github.com/slow-craft/nautilus-core/component/ca"
+	"github.com/slow-craft/nautilus-core/component/ech"
+	"github.com/slow-craft/nautilus-core/transport/vmess"
 
 	"github.com/metacubex/http"
 	"github.com/metacubex/smux"

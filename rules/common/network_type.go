@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	C "github.com/metacubex/mihomo/constant"
+	C "github.com/slow-craft/nautilus-core/constant"
 )
 
 type NetworkType struct {

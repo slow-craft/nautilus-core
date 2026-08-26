@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/metacubex/mihomo/component/auth"
-	"github.com/metacubex/mihomo/listener/reality"
+	"github.com/slow-craft/nautilus-core/component/auth"
+	"github.com/slow-craft/nautilus-core/listener/reality"
 )
 
 // AuthServer for http/socks/mixed server

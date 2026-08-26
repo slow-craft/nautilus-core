@@ -3,8 +3,8 @@ package common
 import (
 	"fmt"
 
-	"github.com/metacubex/mihomo/common/utils"
-	C "github.com/metacubex/mihomo/constant"
+	"github.com/slow-craft/nautilus-core/common/utils"
+	C "github.com/slow-craft/nautilus-core/constant"
 )
 
 type DSCP struct {

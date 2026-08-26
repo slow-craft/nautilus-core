@@ -13,9 +13,9 @@ import (
 	"net"
 	"strings"
 
-	"github.com/metacubex/mihomo/component/ca"
-	tlsC "github.com/metacubex/mihomo/component/tls"
-	"github.com/metacubex/mihomo/ntp"
+	"github.com/slow-craft/nautilus-core/component/ca"
+	tlsC "github.com/slow-craft/nautilus-core/component/tls"
+	"github.com/slow-craft/nautilus-core/ntp"
 
 	"github.com/metacubex/http"
 	"github.com/metacubex/randv2"

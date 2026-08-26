@@ -8,11 +8,11 @@ import (
 
 	"github.com/metacubex/sing/common/metadata"
 
-	"github.com/metacubex/mihomo/common/lru"
-	N "github.com/metacubex/mihomo/common/net"
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/constant/sniffer"
-	"github.com/metacubex/mihomo/log"
+	"github.com/slow-craft/nautilus-core/common/lru"
+	N "github.com/slow-craft/nautilus-core/common/net"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/constant/sniffer"
+	"github.com/slow-craft/nautilus-core/log"
 )
 
 var (

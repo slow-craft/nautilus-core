@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/exp/slices"
 
-	"github.com/metacubex/mihomo/component/trie"
+	"github.com/slow-craft/nautilus-core/component/trie"
 	"github.com/stretchr/testify/assert"
 )
 

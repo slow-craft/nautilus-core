@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/metacubex/mihomo/adapter/outbound"
-	"github.com/metacubex/mihomo/component/ca"
-	"github.com/metacubex/mihomo/listener/inbound"
-	"github.com/metacubex/mihomo/transport/tlsmirror"
+	"github.com/slow-craft/nautilus-core/adapter/outbound"
+	"github.com/slow-craft/nautilus-core/component/ca"
+	"github.com/slow-craft/nautilus-core/listener/inbound"
+	"github.com/slow-craft/nautilus-core/transport/tlsmirror"
 
 	"github.com/metacubex/http"
 	"github.com/metacubex/tls"

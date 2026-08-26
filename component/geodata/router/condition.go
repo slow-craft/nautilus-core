@@ -5,9 +5,9 @@ import (
 	"net/netip"
 	"strings"
 
-	"github.com/metacubex/mihomo/component/cidr"
-	"github.com/metacubex/mihomo/component/geodata/strmatcher"
-	"github.com/metacubex/mihomo/component/trie"
+	"github.com/slow-craft/nautilus-core/component/cidr"
+	"github.com/slow-craft/nautilus-core/component/geodata/strmatcher"
+	"github.com/slow-craft/nautilus-core/component/trie"
 )
 
 var matcherTypeMap = map[Domain_Type]strmatcher.Type{

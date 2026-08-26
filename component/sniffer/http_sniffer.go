@@ -8,9 +8,9 @@ import (
 	"net/netip"
 	"strings"
 
-	"github.com/metacubex/mihomo/common/utils"
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/constant/sniffer"
+	"github.com/slow-craft/nautilus-core/common/utils"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/constant/sniffer"
 
 	"golang.org/x/net/http2/hpack"
 )

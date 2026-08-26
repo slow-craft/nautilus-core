@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/metacubex/mihomo/hub/executor"
-	"github.com/metacubex/mihomo/log"
+	"github.com/slow-craft/nautilus-core/hub/executor"
+	"github.com/slow-craft/nautilus-core/log"
 
 	"github.com/metacubex/chi"
 	"github.com/metacubex/chi/render"

@@ -5,12 +5,12 @@ import (
 	"net"
 	"runtime/debug"
 
-	N "github.com/metacubex/mihomo/common/net"
-	C "github.com/metacubex/mihomo/constant"
-	LC "github.com/metacubex/mihomo/listener/config"
-	"github.com/metacubex/mihomo/listener/inner"
-	"github.com/metacubex/mihomo/log"
-	"github.com/metacubex/mihomo/transport/restls"
+	N "github.com/slow-craft/nautilus-core/common/net"
+	C "github.com/slow-craft/nautilus-core/constant"
+	LC "github.com/slow-craft/nautilus-core/listener/config"
+	"github.com/slow-craft/nautilus-core/listener/inner"
+	"github.com/slow-craft/nautilus-core/log"
+	"github.com/slow-craft/nautilus-core/transport/restls"
 )
 
 type Builder struct {

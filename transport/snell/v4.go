@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/transport/shadowsocks/shadowaead"
+	"github.com/slow-craft/nautilus-core/transport/shadowsocks/shadowaead"
 )
 
 const (

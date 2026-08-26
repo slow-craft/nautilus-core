@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/netip"
 
-	"github.com/metacubex/mihomo/common/lru"
-	"github.com/metacubex/mihomo/component/fakeip"
-	C "github.com/metacubex/mihomo/constant"
+	"github.com/slow-craft/nautilus-core/common/lru"
+	"github.com/slow-craft/nautilus-core/component/fakeip"
+	C "github.com/slow-craft/nautilus-core/constant"
 )
 
 type ResolverEnhancer struct {

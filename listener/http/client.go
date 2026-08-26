@@ -6,10 +6,10 @@ import (
 	"net"
 	"time"
 
-	"github.com/metacubex/mihomo/adapter/inbound"
-	N "github.com/metacubex/mihomo/common/net"
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/transport/socks5"
+	"github.com/slow-craft/nautilus-core/adapter/inbound"
+	N "github.com/slow-craft/nautilus-core/common/net"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/transport/socks5"
 
 	"github.com/metacubex/http"
 )

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/metacubex/mihomo/common/utils"
 	"github.com/openacid/low/bitmap"
+	"github.com/slow-craft/nautilus-core/common/utils"
 )
 
 const (

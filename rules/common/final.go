@@ -1,7 +1,7 @@
 package common
 
 import (
-	C "github.com/metacubex/mihomo/constant"
+	C "github.com/slow-craft/nautilus-core/constant"
 )
 
 type Match struct {

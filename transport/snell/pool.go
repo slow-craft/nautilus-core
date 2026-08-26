@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/metacubex/mihomo/component/pool"
-	"github.com/metacubex/mihomo/transport/shadowsocks/shadowaead"
+	"github.com/slow-craft/nautilus-core/component/pool"
+	"github.com/slow-craft/nautilus-core/transport/shadowsocks/shadowaead"
 )
 
 type Pool struct {

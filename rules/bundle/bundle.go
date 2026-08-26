@@ -6,8 +6,8 @@ import (
 	"io"
 	"io/fs"
 
-	"github.com/metacubex/mihomo/component/resource"
-	C "github.com/metacubex/mihomo/constant"
+	"github.com/slow-craft/nautilus-core/component/resource"
+	C "github.com/slow-craft/nautilus-core/constant"
 
 	"github.com/metacubex/sevenzip"
 )

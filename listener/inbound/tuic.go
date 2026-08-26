@@ -3,10 +3,10 @@ package inbound
 import (
 	"strings"
 
-	C "github.com/metacubex/mihomo/constant"
-	LC "github.com/metacubex/mihomo/listener/config"
-	"github.com/metacubex/mihomo/listener/tuic"
-	"github.com/metacubex/mihomo/log"
+	C "github.com/slow-craft/nautilus-core/constant"
+	LC "github.com/slow-craft/nautilus-core/listener/config"
+	"github.com/slow-craft/nautilus-core/listener/tuic"
+	"github.com/slow-craft/nautilus-core/log"
 )
 
 type TuicOption struct {

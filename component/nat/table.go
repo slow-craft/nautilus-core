@@ -4,8 +4,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/metacubex/mihomo/common/xsync"
-	C "github.com/metacubex/mihomo/constant"
+	"github.com/slow-craft/nautilus-core/common/xsync"
+	C "github.com/slow-craft/nautilus-core/constant"
 )
 
 type Table struct {

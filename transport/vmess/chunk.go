@@ -5,7 +5,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/metacubex/mihomo/common/pool"
+	"github.com/slow-craft/nautilus-core/common/pool"
 )
 
 const (

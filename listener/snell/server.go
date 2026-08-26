@@ -12,17 +12,17 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/metacubex/mihomo/adapter/inbound"
-	N "github.com/metacubex/mihomo/common/net"
-	"github.com/metacubex/mihomo/common/utils"
-	C "github.com/metacubex/mihomo/constant"
-	LC "github.com/metacubex/mihomo/listener/config"
-	"github.com/metacubex/mihomo/listener/jls"
-	"github.com/metacubex/mihomo/listener/restls"
-	"github.com/metacubex/mihomo/listener/shadowtls"
-	"github.com/metacubex/mihomo/transport/shadowsocks/shadowaead"
-	obfs "github.com/metacubex/mihomo/transport/simple-obfs"
-	"github.com/metacubex/mihomo/transport/snell"
+	"github.com/slow-craft/nautilus-core/adapter/inbound"
+	N "github.com/slow-craft/nautilus-core/common/net"
+	"github.com/slow-craft/nautilus-core/common/utils"
+	C "github.com/slow-craft/nautilus-core/constant"
+	LC "github.com/slow-craft/nautilus-core/listener/config"
+	"github.com/slow-craft/nautilus-core/listener/jls"
+	"github.com/slow-craft/nautilus-core/listener/restls"
+	"github.com/slow-craft/nautilus-core/listener/shadowtls"
+	"github.com/slow-craft/nautilus-core/transport/shadowsocks/shadowaead"
+	obfs "github.com/slow-craft/nautilus-core/transport/simple-obfs"
+	"github.com/slow-craft/nautilus-core/transport/snell"
 )
 
 const maxPacketLength = 0x3fff

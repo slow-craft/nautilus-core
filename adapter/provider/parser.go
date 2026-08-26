@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/metacubex/mihomo/common/structure"
-	"github.com/metacubex/mihomo/common/utils"
-	"github.com/metacubex/mihomo/component/resource"
-	C "github.com/metacubex/mihomo/constant"
-	P "github.com/metacubex/mihomo/constant/provider"
+	"github.com/slow-craft/nautilus-core/common/structure"
+	"github.com/slow-craft/nautilus-core/common/utils"
+	"github.com/slow-craft/nautilus-core/component/resource"
+	C "github.com/slow-craft/nautilus-core/constant"
+	P "github.com/slow-craft/nautilus-core/constant/provider"
 )
 
 var (

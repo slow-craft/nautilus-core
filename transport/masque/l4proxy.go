@@ -6,7 +6,7 @@ import (
 	"net"
 	"unsafe"
 
-	"github.com/metacubex/mihomo/common/contextutils"
+	"github.com/slow-craft/nautilus-core/common/contextutils"
 
 	"github.com/metacubex/http"
 	"github.com/metacubex/quic-go"

@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/metacubex/mihomo/common/buf"
-	"github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/quic-go/quicvarint"
+	"github.com/slow-craft/nautilus-core/common/buf"
+	"github.com/slow-craft/nautilus-core/constant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

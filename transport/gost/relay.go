@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	C "github.com/metacubex/mihomo/constant"
-	mihomoVMess "github.com/metacubex/mihomo/transport/vmess"
+	C "github.com/slow-craft/nautilus-core/constant"
+	mihomoVMess "github.com/slow-craft/nautilus-core/transport/vmess"
 
 	"github.com/metacubex/smux"
 )

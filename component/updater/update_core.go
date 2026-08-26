@@ -14,21 +14,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/component/ca"
-	mihomoHttp "github.com/metacubex/mihomo/component/http"
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/constant/features"
-	"github.com/metacubex/mihomo/log"
+	"github.com/slow-craft/nautilus-core/component/ca"
+	mihomoHttp "github.com/slow-craft/nautilus-core/component/http"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/constant/features"
+	"github.com/slow-craft/nautilus-core/log"
 
 	"github.com/metacubex/http"
 )
 
 const (
-	baseReleaseURL    = "https://github.com/metacubex/mihomo/releases/latest/download/"
-	versionReleaseURL = "https://github.com/metacubex/mihomo/releases/latest/download/version.txt"
+	baseReleaseURL    = "https://github.com/slow-craft/nautilus-core/releases/latest/download/"
+	versionReleaseURL = "https://github.com/slow-craft/nautilus-core/releases/latest/download/version.txt"
 
-	baseAlphaURL    = "https://github.com/metacubex/mihomo/releases/download/Prerelease-Alpha/"
-	versionAlphaURL = "https://github.com/metacubex/mihomo/releases/download/Prerelease-Alpha/version.txt"
+	baseAlphaURL    = "https://github.com/slow-craft/nautilus-core/releases/download/Prerelease-Alpha/"
+	versionAlphaURL = "https://github.com/slow-craft/nautilus-core/releases/download/Prerelease-Alpha/version.txt"
 
 	// MaxPackageFileSize is a maximum package file length in bytes. The largest
 	// package whose size is limited by this constant currently has the size of

@@ -16,11 +16,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/metacubex/mihomo/common/buf"
-	N "github.com/metacubex/mihomo/common/net"
-	"github.com/metacubex/mihomo/component/ech"
-	tlsC "github.com/metacubex/mihomo/component/tls"
-	"github.com/metacubex/mihomo/log"
+	"github.com/slow-craft/nautilus-core/common/buf"
+	N "github.com/slow-craft/nautilus-core/common/net"
+	"github.com/slow-craft/nautilus-core/component/ech"
+	tlsC "github.com/slow-craft/nautilus-core/component/tls"
+	"github.com/slow-craft/nautilus-core/log"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"

@@ -1,6 +1,6 @@
 package mekya
 
-import "github.com/metacubex/mihomo/transport/mkcp"
+import "github.com/slow-craft/nautilus-core/transport/mkcp"
 
 type Config struct {
 	KCP                            mkcp.Config

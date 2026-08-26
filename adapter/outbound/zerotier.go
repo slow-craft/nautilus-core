@@ -15,16 +15,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/component/dialer"
-	"github.com/metacubex/mihomo/component/iface"
-	"github.com/metacubex/mihomo/component/resolver"
-	C "github.com/metacubex/mihomo/constant"
-	"github.com/metacubex/mihomo/dns"
-	"github.com/metacubex/mihomo/log"
 	M "github.com/metacubex/sing/common/metadata"
 	ZT "github.com/metacubex/zerotier-go"
 	ZTIP "github.com/metacubex/zerotier-go/iplink"
 	ZTTransport "github.com/metacubex/zerotier-go/transport"
+	"github.com/slow-craft/nautilus-core/component/dialer"
+	"github.com/slow-craft/nautilus-core/component/iface"
+	"github.com/slow-craft/nautilus-core/component/resolver"
+	C "github.com/slow-craft/nautilus-core/constant"
+	"github.com/slow-craft/nautilus-core/dns"
+	"github.com/slow-craft/nautilus-core/log"
 )
 
 const (

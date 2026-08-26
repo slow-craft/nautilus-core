@@ -1,8 +1,8 @@
 package net
 
 import (
-	"github.com/metacubex/mihomo/common/net/deadline"
-	"github.com/metacubex/mihomo/common/net/packet"
+	"github.com/slow-craft/nautilus-core/common/net/deadline"
+	"github.com/slow-craft/nautilus-core/common/net/packet"
 )
 
 type EnhancePacketConn = packet.EnhancePacketConn

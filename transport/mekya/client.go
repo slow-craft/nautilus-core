@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/common/httputils"
-	tlsC "github.com/metacubex/mihomo/component/tls"
-	"github.com/metacubex/mihomo/transport/mkcp"
+	"github.com/slow-craft/nautilus-core/common/httputils"
+	tlsC "github.com/slow-craft/nautilus-core/component/tls"
+	"github.com/slow-craft/nautilus-core/transport/mkcp"
 
 	"github.com/metacubex/http"
 	"github.com/metacubex/http/httptrace"

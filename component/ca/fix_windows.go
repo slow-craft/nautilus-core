@@ -1,7 +1,7 @@
 package ca
 
 import (
-	"github.com/metacubex/mihomo/constant/features"
+	"github.com/slow-craft/nautilus-core/constant/features"
 )
 
 func init() {

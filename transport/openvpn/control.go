@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/common/contextutils"
-	"github.com/metacubex/mihomo/common/pool"
+	"github.com/slow-craft/nautilus-core/common/contextutils"
+	"github.com/slow-craft/nautilus-core/common/pool"
 )
 
 type PacketIO interface {
