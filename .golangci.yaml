@@ -1,17 +1,63 @@
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
-    - gofumpt
-    - staticcheck
     - govet
+    - staticcheck
+  settings:
+    staticcheck:
+      # v1 enabled staticcheck, without the separate gosimple/stylecheck linters.
+      checks: ["SA*"]
+  exclusions:
+    generated: lax
+    # Legacy diagnostics reproduced on v1.1.3 (1329fbdf) with this toolchain.
+    # Keep exclusions scoped to existing files and checks; new code stays checked.
+    rules:
+      # Same ignored-error statement as the baseline SA4006 diagnostic.
+      - linters: [staticcheck]
+        path: "^listener/sing_shadowsocks/server\\.go$"
+        text: "^SA4017: Errorf"
+      - linters: [staticcheck]
+        path: "^(?:component/profile/cachefile/cache\\.go|component/tls/utls\\.go|transport/hysteria/core/client\\.go|transport/openvpn/client\\.go|transport/openvpn/control\\.go|transport/shadowsocks/shadowstream/cipher\\.go|transport/sudoku/obfs/httpmask/tunnel_retry\\.go|transport/vmess/conn\\.go)$"
+        text: "^SA1019(?:\\(related information\\))?:"
+      - linters: [staticcheck]
+        path: "^(?:common/convert/converter\\.go|common/orderedmap/json_fuzz_test\\.go|common/orderedmap/orderedmap_test\\.go|component/resource/fetcher\\.go|dns/doq\\.go|listener/hysteria2_realm/server\\.go|listener/sing_shadowsocks/server\\.go|rules/logic_test/logic_test\\.go|transport/xhttp/upload_queue_test\\.go)$"
+        text: "^SA4006(?:\\(related information\\))?:"
+      - linters: [staticcheck]
+        path: "^(?:component/dialer/tfo\\.go)$"
+        text: "^SA4009(?:\\(related information\\))?:"
+      - linters: [staticcheck]
+        path: "^(?:transport/tuic/v4/server\\.go|transport/tuic/v5/client\\.go|transport/tuic/v5/server\\.go)$"
+        text: "^SA4017(?:\\(related information\\))?:"
+      - linters: [staticcheck]
+        path: "^(?:transport/hysteria/conns/udp/hop\\.go)$"
+        text: "^SA6002(?:\\(related information\\))?:"
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
     - gci
-
-linters-settings:
-  gci:
-    custom-order: true
-    sections:
-      - standard
-      - prefix(github.com/slow-craft/nautilus-core)
-      - default
-  staticcheck:
-    go: '1.19'
+    - gofumpt
+  settings:
+    gci:
+      sections:
+        - standard
+        - prefix(github.com/slow-craft/nautilus-core)
+        - default
+      custom-order: true
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

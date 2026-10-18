@@ -13,9 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/metacubex/tls"
 	N "github.com/slow-craft/nautilus-core/common/net"
 	"github.com/slow-craft/nautilus-core/component/ca"
+
+	"github.com/metacubex/tls"
 )
 
 const (

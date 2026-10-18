@@ -1,9 +1,9 @@
 package config
 
 import (
-	"github.com/slow-craft/nautilus-core/listener/sing"
-
 	"encoding/json"
+
+	"github.com/slow-craft/nautilus-core/listener/sing"
 )
 
 type Hysteria2Server struct {

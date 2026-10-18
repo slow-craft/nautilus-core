@@ -8,9 +8,10 @@ import (
 	"strings"
 	_ "unsafe"
 
-	"github.com/metacubex/randv2"
 	"github.com/slow-craft/nautilus-core/component/resolver/hosts"
 	"github.com/slow-craft/nautilus-core/component/trie"
+
+	"github.com/metacubex/randv2"
 )
 
 var (

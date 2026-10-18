@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/metacubex/http"
-	"github.com/metacubex/tls"
 	"github.com/slow-craft/nautilus-core/component/ca"
 
+	"github.com/metacubex/http"
+	"github.com/metacubex/tls"
 	"github.com/stretchr/testify/require"
 )
 

@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/metacubex/edwards25519"
 	"github.com/slow-craft/nautilus-core/transport/sudoku/crypto"
 	"github.com/slow-craft/nautilus-core/transport/sudoku/obfs/sudoku"
+
+	"github.com/metacubex/edwards25519"
 )
 
 func NewTable(key string, tableType string) *sudoku.Table {

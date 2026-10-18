@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"strconv"
 	"strings"
 	"time"
@@ -620,6 +621,9 @@ func NewVless(option VlessOption) (*Vless, error) {
 			} else {
 				requestHost = v.option.Server
 			}
+			if ip, err := netip.ParseAddr(requestHost); err == nil && ip.Is6() {
+				requestHost = "[" + requestHost + "]"
+			}
 		}
 
 		var hKeepAlivePeriod time.Duration
@@ -798,6 +802,9 @@ func NewVless(option VlessOption) (*Vless, error) {
 					downloadHost = downloadServerName
 				} else {
 					downloadHost = downloadServer
+				}
+				if ip, err := netip.ParseAddr(downloadHost); err == nil && ip.Is6() {
+					downloadHost = "[" + downloadHost + "]"
 				}
 			}
 

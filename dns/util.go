@@ -128,6 +128,8 @@ func transform(servers []NameServer, resolver resolver.Resolver) []dnsClient {
 			c = newSystemClient()
 		case "tailscale":
 			c = newTailscaleClient(s.Addr)
+		case "easytier":
+			c = newEasyTierClient(s.Addr)
 		case "rcode":
 			c = newRCodeClient(s.Addr)
 		case "quic":
@@ -374,10 +376,10 @@ func msgToHTTPSRRInfo(msg *D.Msg) string {
 
 	collect(msg.Answer)
 
-	//TODO: Do we need to process the data in msg.Extra?
+	// TODO: Do we need to process the data in msg.Extra?
 	//      If so, do we need to validate whether the domain names within it match our request?
 	//      To simplify the problem, let's ignore it for now.
-	//collect(msg.Extra)
+	// collect(msg.Extra)
 
 	if len(alpns) == 0 && publicName == "" && !hasIPv4 && !hasIPv6 {
 		return ""

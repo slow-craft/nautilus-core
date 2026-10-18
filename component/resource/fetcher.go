@@ -17,8 +17,10 @@ import (
 	"github.com/samber/lo"
 )
 
-type Parser[V any] func([]byte) (V, error)
-type BundleFile func() (fs.File, error)
+type (
+	Parser[V any] func([]byte) (V, error)
+	BundleFile    func() (fs.File, error)
+)
 
 type Fetcher[V any] struct {
 	ctx          context.Context

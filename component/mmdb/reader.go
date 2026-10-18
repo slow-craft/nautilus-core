@@ -5,8 +5,9 @@ import (
 	"net"
 	"strings"
 
-	"github.com/oschwald/maxminddb-golang"
 	"github.com/slow-craft/nautilus-core/log"
+
+	"github.com/oschwald/maxminddb-golang"
 )
 
 type geoip2Country struct {

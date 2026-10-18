@@ -3,7 +3,6 @@ package dns
 import (
 	"context"
 	"fmt"
-	"github.com/slow-craft/nautilus-core/component/resolver"
 	"net"
 	"runtime"
 	"sync"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/slow-craft/nautilus-core/common/deque"
 	"github.com/slow-craft/nautilus-core/component/ca"
+	"github.com/slow-craft/nautilus-core/component/resolver"
 	C "github.com/slow-craft/nautilus-core/constant"
 
 	"github.com/metacubex/tls"

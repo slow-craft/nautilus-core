@@ -8,6 +8,7 @@ import (
 	"github.com/slow-craft/nautilus-core/component/geodata/router"
 	C "github.com/slow-craft/nautilus-core/constant"
 	"github.com/slow-craft/nautilus-core/log"
+
 	"google.golang.org/protobuf/proto"
 )
 

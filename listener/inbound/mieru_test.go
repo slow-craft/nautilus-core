@@ -9,6 +9,7 @@ import (
 
 	"github.com/slow-craft/nautilus-core/adapter/outbound"
 	"github.com/slow-craft/nautilus-core/listener/inbound"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -203,6 +204,7 @@ func testInboundMieruTCP(t *testing.T, handshakeMode string) {
 	defer l.Close()
 	lc := mieruTestInboundListenConfig{
 		ListenFn: func(ctx context.Context, network, address string) (net.Listener, error) {
+			assert.Equal(t, l.Addr().String(), address)
 			return l, nil
 		},
 		ListenPacketFn: func(ctx context.Context, network, address string) (net.PacketConn, error) {
@@ -273,6 +275,7 @@ func testInboundMieruUDP(t *testing.T, handshakeMode string) {
 			panic("should not be called")
 		},
 		ListenPacketFn: func(ctx context.Context, network, address string) (net.PacketConn, error) {
+			assert.Equal(t, l.LocalAddr().String(), address)
 			return l, nil
 		},
 	}

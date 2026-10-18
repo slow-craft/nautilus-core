@@ -1,10 +1,11 @@
 package udp
 
 import (
-	"github.com/slow-craft/nautilus-core/transport/hysteria/obfs"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/slow-craft/nautilus-core/transport/hysteria/obfs"
 )
 
 const udpBufferSize = 65535

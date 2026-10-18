@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
 	"github.com/slow-craft/nautilus-core/adapter/outbound"
 	C "github.com/slow-craft/nautilus-core/constant"
+
+	"github.com/docker/docker/api/types/container"
 	"github.com/stretchr/testify/require"
 )
 

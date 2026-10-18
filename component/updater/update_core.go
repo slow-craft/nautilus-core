@@ -58,14 +58,17 @@ func (u *CoreUpdater) CoreBaseName() string {
 		if runtime.GOOS == "android" {
 			// nautilus-core-android-arm64-v8
 			return fmt.Sprintf("nautilus-core-%s-%s-v8", runtime.GOOS, runtime.GOARCH)
-		} else {
-			// nautilus-core-linux-arm64
-			return fmt.Sprintf("nautilus-core-%s-%s", runtime.GOOS, runtime.GOARCH)
 		}
+		// nautilus-core-linux-arm64
+		return fmt.Sprintf("nautilus-core-%s-%s", runtime.GOOS, runtime.GOARCH)
 	case "mips", "mipsle":
 		// nautilus-core-linux-mips-hardfloat
 		return fmt.Sprintf("nautilus-core-%s-%s-%s", runtime.GOOS, runtime.GOARCH, features.GOMIPS)
 	case "amd64":
+		if runtime.GOOS == "android" {
+			// nautilus-core-android-amd64
+			return fmt.Sprintf("nautilus-core-%s-%s", runtime.GOOS, runtime.GOARCH)
+		}
 		// nautilus-core-linux-amd64-v1
 		return fmt.Sprintf("nautilus-core-%s-%s-%s", runtime.GOOS, runtime.GOARCH, features.GOAMD64)
 	default:
@@ -135,7 +138,7 @@ func (u *CoreUpdater) Update(currentExePath string, channel string, force bool) 
 	backupDir := filepath.Join(workDir, "meta-backup")
 	updateDir := filepath.Join(workDir, "meta-update")
 	packagePath := filepath.Join(updateDir, packageName)
-	//log.Infoln(packagePath)
+	// log.Infoln(packagePath)
 
 	updateExeName := mihomoBaseName
 	if runtime.GOOS == "windows" {

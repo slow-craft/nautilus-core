@@ -140,7 +140,6 @@ func router(isDebug bool, secret string, dohServer string, cors Cors) *chi.Mux {
 		}
 		r.Mount("/upgrade", upgradeRouter())
 		addExternalRouters(r)
-
 	})
 
 	if uiPath != "" {

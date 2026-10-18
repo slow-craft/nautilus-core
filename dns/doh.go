@@ -383,10 +383,17 @@ func (doh *dnsOverHTTPS) createClient(ctx context.Context) (*http.Client, error)
 // HTTP3 is enabled in the upstream options).  If this attempt is successful,
 // it returns an HTTP3 transport, otherwise it returns the H1/H2 transport.
 func (doh *dnsOverHTTPS) createTransport(ctx context.Context) (t http.RoundTripper, err error) {
+	// http.Transport dials in a context detached from the request, so a dial
+	// that the query has given up on must still end on its own.
 	transport := &http.Transport{
 		DisableCompression: true,
-		DialContext:        doh.dialer.DialContext,
-		IdleConnTimeout:    transportDefaultIdleConnTimeout,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			ctx, cancel := context.WithTimeout(ctx, dialTimeout)
+			defer cancel()
+			return doh.dialer.DialContext(ctx, network, addr)
+		},
+		IdleConnTimeout:     transportDefaultIdleConnTimeout,
+		TLSHandshakeTimeout: dialTimeout,
 	}
 
 	if doh.url.Scheme == "http" {
@@ -645,7 +652,7 @@ func (doh *dnsOverHTTPS) probeQUIC(ctx context.Context, addr string, tlsConfig *
 
 	ch <- nil
 
-	elapsed := time.Now().Sub(startTime)
+	elapsed := time.Since(startTime)
 	log.Debugln("elapsed on establishing a QUIC connection: %s", elapsed)
 }
 
@@ -665,7 +672,7 @@ func (doh *dnsOverHTTPS) probeTLS(ctx context.Context, tlsConfig *tls.Config, ch
 
 	ch <- nil
 
-	elapsed := time.Now().Sub(startTime)
+	elapsed := time.Since(startTime)
 	log.Debugln("elapsed on establishing a TLS connection: %s", elapsed)
 }
 

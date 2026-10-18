@@ -8,6 +8,7 @@ import (
 	"github.com/slow-craft/nautilus-core/adapter/outbound"
 	"github.com/slow-craft/nautilus-core/listener/inbound"
 	"github.com/slow-craft/nautilus-core/transport/sudoku"
+
 	"github.com/stretchr/testify/assert"
 )
 

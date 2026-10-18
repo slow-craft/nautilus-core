@@ -594,7 +594,6 @@ func StreamUpgradedWebsocketConn(w http.ResponseWriter, r *http.Request) (net.Co
 		} else {
 			conn = N.NewCachedConn(conn, edBuf)
 		}
-
 	}
 
 	return conn, nil

@@ -1,10 +1,10 @@
 package context
 
 import (
-	"github.com/slow-craft/nautilus-core/common/utils"
 	"net"
 
 	N "github.com/slow-craft/nautilus-core/common/net"
+	"github.com/slow-craft/nautilus-core/common/utils"
 	C "github.com/slow-craft/nautilus-core/constant"
 
 	"github.com/gofrs/uuid/v5"

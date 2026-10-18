@@ -9,17 +9,19 @@ import (
 
 var ErrSlimClientDisabled = errors.New("outbound type disabled in slim client build")
 
-type ShadowSocksROption struct{ BasicOption }
-type Socks5Option struct{ BasicOption }
-type VlessOption struct{ BasicOption }
-type SnellOption struct{ BasicOption }
-type WireGuardOption struct{ BasicOption }
-type GostRelayOption struct{ BasicOption }
-type SshOption struct{ BasicOption }
-type SudokuOption struct{ BasicOption }
-type MasqueOption struct{ BasicOption }
-type TrustTunnelOption struct{ BasicOption }
-type OpenVPNOption struct{ BasicOption }
+type (
+	ShadowSocksROption struct{ BasicOption }
+	Socks5Option       struct{ BasicOption }
+	VlessOption        struct{ BasicOption }
+	SnellOption        struct{ BasicOption }
+	WireGuardOption    struct{ BasicOption }
+	GostRelayOption    struct{ BasicOption }
+	SshOption          struct{ BasicOption }
+	SudokuOption       struct{ BasicOption }
+	MasqueOption       struct{ BasicOption }
+	TrustTunnelOption  struct{ BasicOption }
+	OpenVPNOption      struct{ BasicOption }
+)
 
 func disabledSlimClient(name string) (ProxyAdapter, error) {
 	return nil, fmt.Errorf("%w: %s", ErrSlimClientDisabled, name)

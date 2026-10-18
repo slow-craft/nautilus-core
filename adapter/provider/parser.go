@@ -12,9 +12,7 @@ import (
 	P "github.com/slow-craft/nautilus-core/constant/provider"
 )
 
-var (
-	errVehicleType = errors.New("unsupport vehicle type")
-)
+var errVehicleType = errors.New("unsupport vehicle type")
 
 type healthCheckSchema struct {
 	Enable         bool   `provider:"enable"`

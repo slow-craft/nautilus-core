@@ -8,11 +8,11 @@ import (
 	"net/netip"
 	"strconv"
 
-	"github.com/metacubex/blake3"
-	"github.com/metacubex/quic-go"
-
 	C "github.com/slow-craft/nautilus-core/constant"
 	"github.com/slow-craft/nautilus-core/transport/socks5"
+
+	"github.com/metacubex/blake3"
+	"github.com/metacubex/quic-go"
 )
 
 type BufferedReader interface {

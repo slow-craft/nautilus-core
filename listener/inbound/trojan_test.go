@@ -7,6 +7,7 @@ import (
 
 	"github.com/slow-craft/nautilus-core/adapter/outbound"
 	"github.com/slow-craft/nautilus-core/listener/inbound"
+
 	"github.com/stretchr/testify/assert"
 )
 

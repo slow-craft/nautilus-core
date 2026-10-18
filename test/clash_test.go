@@ -16,13 +16,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
 	"github.com/slow-craft/nautilus-core/adapter/outbound"
 	C "github.com/slow-craft/nautilus-core/constant"
 	"github.com/slow-craft/nautilus-core/hub/executor"
 	"github.com/slow-craft/nautilus-core/transport/socks5"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

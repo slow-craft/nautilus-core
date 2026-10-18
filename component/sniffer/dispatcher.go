@@ -6,13 +6,13 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/metacubex/sing/common/metadata"
-
 	"github.com/slow-craft/nautilus-core/common/lru"
 	N "github.com/slow-craft/nautilus-core/common/net"
 	C "github.com/slow-craft/nautilus-core/constant"
 	"github.com/slow-craft/nautilus-core/constant/sniffer"
 	"github.com/slow-craft/nautilus-core/log"
+
+	"github.com/metacubex/sing/common/metadata"
 )
 
 var (

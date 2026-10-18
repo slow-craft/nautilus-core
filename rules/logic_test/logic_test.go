@@ -3,11 +3,10 @@ package logic_test
 import (
 	"testing"
 
-	// https://github.com/golang/go/wiki/CodeReviewComments#import-dot
-	. "github.com/slow-craft/nautilus-core/rules/logic"
-
 	C "github.com/slow-craft/nautilus-core/constant"
 	"github.com/slow-craft/nautilus-core/rules"
+	// https://github.com/golang/go/wiki/CodeReviewComments#import-dot
+	. "github.com/slow-craft/nautilus-core/rules/logic"
 
 	"github.com/stretchr/testify/assert"
 )

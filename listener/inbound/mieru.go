@@ -9,11 +9,11 @@ import (
 	C "github.com/slow-craft/nautilus-core/constant"
 	"github.com/slow-craft/nautilus-core/listener/mieru"
 	"github.com/slow-craft/nautilus-core/log"
-	"google.golang.org/protobuf/proto"
 
 	mieruserver "github.com/enfein/mieru/v3/apis/server"
 	mierutp "github.com/enfein/mieru/v3/apis/trafficpattern"
 	mierupb "github.com/enfein/mieru/v3/pkg/appctl/appctlpb"
+	"google.golang.org/protobuf/proto"
 )
 
 type Mieru struct {
@@ -156,6 +156,7 @@ func buildMieruServerConfig(option *MieruOption, ports utils.IntRanges[uint16]) 
 	lc := option.ListenConfig()
 	return &mieruserver.ServerConfig{
 		Config: &mierupb.ServerConfig{
+			ListenIPAddress:  proto.String(option.Listen),
 			PortBindings:     portBindings,
 			Users:            users,
 			TrafficPattern:   trafficPattern,

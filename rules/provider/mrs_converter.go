@@ -100,7 +100,7 @@ func ConvertMain(args []string) {
 			panic(err)
 		}
 
-		targetFile, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		targetFile, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 		if err != nil {
 			panic(err)
 		}

@@ -8,9 +8,10 @@ import (
 	"sync"
 	"time"
 
-	D "github.com/miekg/dns"
 	"github.com/slow-craft/nautilus-core/component/dhcp"
 	"github.com/slow-craft/nautilus-core/component/iface"
+
+	D "github.com/miekg/dns"
 )
 
 const (

@@ -125,6 +125,7 @@ func (s *serverHandler) parsePacket(packet *Packet, udpRelayMode types.UdpRelayM
 func (s *serverHandler) HandleStream(conn *N.BufferedConn) (err error) {
 	connect, err := ReadConnect(conn)
 	if err != nil {
+		_ = conn.Close()
 		return err
 	}
 	<-s.authCh
@@ -224,5 +225,7 @@ func (s *serverUDPPacket) Drop() {
 	s.packet.DATA = nil
 }
 
-var _ C.UDPPacket = (*serverUDPPacket)(nil)
-var _ C.UDPPacketInAddr = (*serverUDPPacket)(nil)
+var (
+	_ C.UDPPacket       = (*serverUDPPacket)(nil)
+	_ C.UDPPacketInAddr = (*serverUDPPacket)(nil)
+)

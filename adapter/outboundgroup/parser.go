@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dlclark/regexp2"
-
 	"github.com/slow-craft/nautilus-core/adapter/provider"
 	"github.com/slow-craft/nautilus-core/common/structure"
 	"github.com/slow-craft/nautilus-core/common/utils"
 	C "github.com/slow-craft/nautilus-core/constant"
 	P "github.com/slow-craft/nautilus-core/constant/provider"
 	"github.com/slow-craft/nautilus-core/log"
+
+	"github.com/dlclark/regexp2"
 )
 
 var (

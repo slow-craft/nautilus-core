@@ -100,7 +100,7 @@ func New(config LC.ShadowsocksServer, lc C.InboundListenConfig, tunnel C.Tunnel,
 		addr := addr
 
 		if config.Udp {
-			//UDP
+			// UDP
 			ul, err := NewUDP(addr, lc, pickCipher, tunnel, additions...)
 			if err != nil {
 				return nil, err
@@ -108,7 +108,7 @@ func New(config LC.ShadowsocksServer, lc C.InboundListenConfig, tunnel C.Tunnel,
 			sl.udpListeners = append(sl.udpListeners, ul)
 		}
 
-		//TCP
+		// TCP
 		l, err := lc.Listen(context.Background(), "tcp", addr)
 		if err != nil {
 			return nil, err
@@ -140,6 +140,7 @@ func New(config LC.ShadowsocksServer, lc C.InboundListenConfig, tunnel C.Tunnel,
 }
 
 func (l *Listener) Close() error {
+	l.closed = true
 	var retErr error
 	for _, lis := range l.listeners {
 		err := lis.Close()
@@ -190,7 +191,7 @@ func (l *Listener) HandleConn(conn net.Conn, tunnel C.Tunnel, additions ...inbou
 		return
 	}
 	l.handler.HandleSocket(target, conn, additions...)
-	//tunnel.HandleTCPConn(inbound.NewSocket(target, conn, C.SHADOWSOCKS, additions...))
+	// tunnel.HandleTCPConn(inbound.NewSocket(target, conn, C.SHADOWSOCKS, additions...))
 }
 
 func HandleShadowSocks(conn net.Conn, tunnel C.Tunnel, additions ...inbound.Addition) bool {

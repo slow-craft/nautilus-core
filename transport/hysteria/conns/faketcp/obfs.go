@@ -1,11 +1,12 @@
 package faketcp
 
 import (
-	"github.com/slow-craft/nautilus-core/transport/hysteria/obfs"
 	"net"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/slow-craft/nautilus-core/transport/hysteria/obfs"
 )
 
 const udpBufferSize = 65535

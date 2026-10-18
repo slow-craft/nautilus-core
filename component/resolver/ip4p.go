@@ -8,9 +8,7 @@ import (
 	"github.com/slow-craft/nautilus-core/log"
 )
 
-var (
-	ip4PEnable bool
-)
+var ip4PEnable bool
 
 func GetIP4PEnable() bool {
 	return ip4PEnable
